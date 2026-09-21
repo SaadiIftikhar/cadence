@@ -51,7 +51,7 @@ void main() {
       expect(describeDays(0), 'Once');
       expect(describeDays(0x7F), 'Every day');
       expect(describeDays(0x1F), 'Weekdays');
-      expect(describeDays(0x60), 'Weekends');
+      expect(describeDays(0x60), 'Weekend');
     });
 
     test('lists arbitrary selections in weekday order', () {
@@ -290,6 +290,72 @@ void main() {
       expect(const StepProgress(total: 0, done: 0).allDone, isFalse);
       expect(const StepProgress(total: 3, done: 3).allDone, isTrue);
       expect(const StepProgress(total: 3, done: 2).allDone, isFalse);
+    });
+  });
+
+  group('showDayPickerDialog', () {
+    Future<void> openWith(WidgetTester tester, int mask, void Function(int?) sink) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async =>
+                    sink(await showDayPickerDialog(context, mask)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a preset selects its whole set of days', (tester) async {
+      int? result;
+      await openWith(tester, 0, (r) => result = r);
+
+      await tester.tap(find.text('Weekdays'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(result, 0x1F);
+    });
+
+    testWidgets('every preset round-trips through the summary',
+        (tester) async {
+      for (final (label, mask) in [
+        ('Every day', 0x7F),
+        ('Weekdays', 0x1F),
+        ('Weekend', 0x60),
+      ]) {
+        int? result;
+        await openWith(tester, 0, (r) => result = r);
+
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        // The summary names the same preset the button does.
+        expect(find.text(label), findsNWidgets(2), reason: 'for $label');
+
+        await tester.tap(find.text('Done'));
+        await tester.pumpAndSettle();
+        expect(result, mask, reason: 'for $label');
+      }
+    });
+
+    testWidgets('cancel keeps the original selection', (tester) async {
+      int? result = -1;
+      await openWith(tester, 0x1F, (r) => result = r);
+
+      await tester.tap(find.text('Every day'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNull);
     });
   });
 

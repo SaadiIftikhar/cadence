@@ -82,7 +82,7 @@ String describeDays(int mask) {
   if (mask == 0) return 'Once';
   if (mask == 0x7F) return 'Every day';
   if (mask == 0x1F) return 'Weekdays';
-  if (mask == 0x60) return 'Weekends';
+  if (mask == 0x60) return 'Weekend';
 
   const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   return [
@@ -90,6 +90,14 @@ String describeDays(int mask) {
       if (mask & (1 << i) != 0) names[i],
   ].join(', ');
 }
+
+/// One-tap shortcuts for the selections people actually reach for. The labels
+/// match what [describeDays] reports back, so the dialog uses one vocabulary.
+const _dayPresets = <({String label, int mask})>[
+  (label: 'Every day', mask: 0x7F),
+  (label: 'Weekdays', mask: 0x1F),
+  (label: 'Weekend', mask: 0x60),
+];
 
 /// Opens the weekday chips in a dialog. Returns null if dismissed.
 Future<int?> showDayPickerDialog(BuildContext context, int mask) {
@@ -116,6 +124,22 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.onSurfaceVariant),
                 ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    for (var i = 0; i < _dayPresets.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: _PresetChip(
+                          label: _dayPresets[i].label,
+                          selected: local == _dayPresets[i].mask,
+                          onTap: () =>
+                              setLocal(() => local = _dayPresets[i].mask),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
           ),
@@ -133,6 +157,48 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
       );
     },
   );
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.primary : Colors.transparent,
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.outline,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? AppColors.onPrimary : AppColors.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// M T W T F S S selector. [mask] bit 0 is Monday through bit 6 Sunday.
