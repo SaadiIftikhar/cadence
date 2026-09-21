@@ -48,6 +48,7 @@ dependencies:
   table_calendar: ^3.2.1
   intl: ^0.20.3
   image_cropper: ^12.2.1
+  tabler_icons_plus: ^3.47.0
 
 dev_dependencies:
   flutter_test:

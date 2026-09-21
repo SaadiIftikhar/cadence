@@ -1,26 +1,67 @@
 import 'package:flutter/widgets.dart';
 import 'package:material_symbols_icons/get.dart';
 
-/// Name-keyed access to the full Material Symbols set (~4300 icons).
+import 'tabler_catalog.dart';
+
+/// Name-keyed access to two icon sets: Material Symbols (~4300) and Tabler
+/// (6268), searched together.
 ///
-/// Icons are stored in the database as their string name, so the set can grow
-/// without a migration. Resolution goes through [SymbolsGet.get], which needs
-/// the app to be built with `--no-tree-shake-icons`.
+/// Icons are stored in the database as their string name, so the sets can grow
+/// without a migration. Material Symbols resolution goes through
+/// [SymbolsGet.get], which needs the app to be built with
+/// `--no-tree-shake-icons`.
 class IconCatalog {
   const IconCatalog._();
 
   static const fallback = 'question_mark';
   static const defaultReminder = 'alarm';
 
-  static IconData resolve(String? name) =>
-      SymbolsGet.get(name ?? fallback, SymbolStyle.rounded);
+  /// Tabler names carry this prefix so they cannot collide with a Material
+  /// Symbols name, and so keys stored before Tabler existed still resolve.
+  static const tablerPrefix = 'tb:';
 
-  static List<String> get allNames => SymbolsGet.values.toList(growable: false);
+  static IconData resolve(String? name) {
+    if (name == null) return SymbolsGet.get(fallback, SymbolStyle.rounded);
+    if (!name.startsWith(tablerPrefix)) {
+      return SymbolsGet.get(name, SymbolStyle.rounded);
+    }
 
-  static bool exists(String name) => SymbolsGet.map.containsKey(name);
+    // The codepoints come from a runtime map lookup, so these cannot be const
+    // IconData the way a hand-written `TablerIcons.foo` would be.
+    final key = name.substring(tablerPrefix.length);
+    final outline = tablerOutline[key];
+    if (outline != null) {
+      return IconData(
+        // ignore: non_const_argument_for_const_parameter
+        outline,
+        fontFamily: tablerOutlineFamily,
+        fontPackage: tablerFontPackage,
+      );
+    }
+
+    final filled = tablerFilled[key];
+    if (filled != null) {
+      return IconData(
+        // ignore: non_const_argument_for_const_parameter
+        filled,
+        fontFamily: tablerFilledFamily,
+        fontPackage: tablerFontPackage,
+      );
+    }
+
+    return SymbolsGet.get(fallback, SymbolStyle.rounded);
+  }
+
+  static bool exists(String name) {
+    if (!name.startsWith(tablerPrefix)) return SymbolsGet.map.containsKey(name);
+    final key = name.substring(tablerPrefix.length);
+    return tablerOutline.containsKey(key) || tablerFilled.containsKey(key);
+  }
 
   /// Ranks exact and prefix matches above substring matches so that typing
-  /// "run" surfaces `run_circle` before `directions_run`.
+  /// "run" surfaces `run_circle` before `directions_run`. Material Symbols are
+  /// offered ahead of Tabler within each rank, since they match the app's own
+  /// icons.
   static List<String> search(String query, {int limit = 300}) {
     final q = query.trim().toLowerCase().replaceAll(' ', '_');
     if (q.isEmpty) return suggested;
@@ -28,16 +69,30 @@ class IconCatalog {
     final exact = <String>[];
     final prefix = <String>[];
     final contains = <String>[];
+    var found = 0;
+
+    void consider(String key, String stored) {
+      if (found >= limit * 3) return;
+      if (key == q) {
+        exact.add(stored);
+      } else if (key.startsWith(q)) {
+        prefix.add(stored);
+      } else if (key.contains(q)) {
+        contains.add(stored);
+      } else {
+        return;
+      }
+      found++;
+    }
 
     for (final name in SymbolsGet.map.keys) {
-      if (name == q) {
-        exact.add(name);
-      } else if (name.startsWith(q)) {
-        prefix.add(name);
-      } else if (name.contains(q)) {
-        contains.add(name);
-      }
-      if (exact.length + prefix.length + contains.length >= limit * 3) break;
+      consider(name, name);
+    }
+    for (final key in tablerOutline.keys) {
+      consider(key, '$tablerPrefix$key');
+    }
+    for (final key in tablerFilled.keys) {
+      consider(key, '$tablerPrefix$key');
     }
 
     return [...exact, ...prefix, ...contains].take(limit).toList();

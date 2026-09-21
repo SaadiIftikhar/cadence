@@ -122,7 +122,9 @@ class _IconCell extends StatelessWidget {
           IconCatalog.resolve(name),
           size: 28,
           color: selected ? AppColors.onPrimary : AppColors.onSurface,
-          semanticLabel: name.replaceAll('_', ' '),
+          semanticLabel: name
+              .replaceFirst(IconCatalog.tablerPrefix, '')
+              .replaceAll('_', ' '),
         ),
       ),
     );

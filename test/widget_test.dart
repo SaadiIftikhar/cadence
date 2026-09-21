@@ -44,6 +44,32 @@ void main() {
     test('empty search falls back to the suggested list', () {
       expect(IconCatalog.search('   '), IconCatalog.suggested);
     });
+
+    test('searches Tabler as well as Material Symbols', () {
+      final results = IconCatalog.search('hourglass');
+      expect(results.any((n) => !n.startsWith(IconCatalog.tablerPrefix)), isTrue,
+          reason: 'no Material Symbols match');
+      expect(results.any((n) => n.startsWith(IconCatalog.tablerPrefix)), isTrue,
+          reason: 'no Tabler match');
+    });
+
+    test('a Tabler name resolves to the Tabler font', () {
+      final icon = IconCatalog.resolve('${IconCatalog.tablerPrefix}stopwatch');
+      expect(icon.fontPackage, 'tabler_icons_plus');
+      expect(IconCatalog.exists('${IconCatalog.tablerPrefix}stopwatch'), isTrue);
+    });
+
+    test('an unknown Tabler name falls back rather than throwing', () {
+      final icon = IconCatalog.resolve('${IconCatalog.tablerPrefix}not_an_icon');
+      expect(icon.fontPackage, 'material_symbols_icons');
+      expect(
+          IconCatalog.exists('${IconCatalog.tablerPrefix}not_an_icon'), isFalse);
+    });
+
+    test('bare names still mean Material Symbols', () {
+      // Keys stored before Tabler existed must keep resolving unchanged.
+      expect(IconCatalog.resolve('alarm').fontPackage, 'material_symbols_icons');
+    });
   });
 
   group('describeDays', () {
