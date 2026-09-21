@@ -9,6 +9,7 @@ import '../data/providers.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/anchored_menu.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
 import '../widgets/segmented_border.dart';
@@ -203,7 +204,13 @@ class ReminderListView extends ConsumerWidget {
         ),
       ),
       data: (all) {
-        if (all.isEmpty) return const _EmptyState();
+        if (all.isEmpty) {
+          return const EmptyState(
+            icon: Symbols.alarm_add,
+            title: 'No reminders yet',
+            message: 'Tap + to create one.',
+          );
+        }
         final items = orderedForHome(all, progress);
         return ListView.separated(
           // Bottom padding clears the floating add button.
@@ -217,37 +224,6 @@ class ReminderListView extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Symbols.alarm_add,
-                size: 64, color: AppColors.onSurfaceVariant.withValues(alpha: 0.7)),
-            const SizedBox(height: 20),
-            const Text(
-              'No reminders yet',
-              style: TextStyle(fontSize: 22, color: AppColors.onSurface),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tap + to create one.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -55,15 +55,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     });
     if (!status.allGranted) {
       _toast('Still blocked — you can change it in system settings.');
+      return;
     }
-  }
-
-  Future<void> _rescheduleAll() async {
-    setState(() => _busy = true);
+    // Anything scheduled while the permission was missing was scheduled
+    // inexactly, so re-arm it now rather than waiting for the next launch.
     await ref.read(repositoryProvider).rescheduleAll();
-    if (!mounted) return;
-    setState(() => _busy = false);
-    _toast('All reminders rescheduled.');
   }
 
   String get _permissionSubtitle {
@@ -82,8 +78,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final count = ref.watch(remindersProvider).value?.length ?? 0;
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
@@ -107,17 +101,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       onPressed: _busy ? null : _request,
                       child: const Text('Grant'),
                     ),
-        ),
-        const SizedBox(height: 26),
-        const _SectionLabel('Maintenance'),
-        _SettingRow(
-          icon: Symbols.refresh,
-          title: 'Reschedule all reminders',
-          subtitle: '$count reminder${count == 1 ? '' : 's'} stored',
-          trailing: TextButton(
-            onPressed: _busy ? null : _rescheduleAll,
-            child: const Text('Run'),
-          ),
         ),
         const SizedBox(height: 26),
         const _SectionLabel('About'),

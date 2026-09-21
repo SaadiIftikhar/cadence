@@ -7,6 +7,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/pill_tile.dart';
 import 'run_reminder_screen.dart';
 
@@ -98,12 +99,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(height: 14),
             if (forDay.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 28),
-                child: Text(
-                  'Nothing scheduled for this day.',
-                  style: TextStyle(color: AppColors.onSurfaceVariant),
-                ),
+              const EmptyState(
+                icon: Symbols.event_busy,
+                title: 'Nothing scheduled',
+                message: 'No reminders repeat on this day.',
               )
             else
               for (final r in forDay)
