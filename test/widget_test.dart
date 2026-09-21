@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
+import 'package:step_reminder/widgets/anchored_menu.dart';
 import 'package:step_reminder/widgets/cookie_timer.dart';
 import 'package:step_reminder/widgets/form_fields.dart';
 import 'package:step_reminder/widgets/pill_tile.dart';
@@ -91,6 +92,76 @@ void main() {
     testWidgets('a single step gets no segmented border', (tester) async {
       await pumpPill(tester, 0, 1);
       expect(find.byType(SegmentedProgressBorder), findsNothing);
+    });
+  });
+
+  group('showAnchoredMenu', () {
+    Future<GlobalKey> pumpHost(
+      WidgetTester tester,
+      void Function(String?) onResult,
+    ) async {
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  key: key,
+                  onPressed: () async {
+                    onResult(
+                      await showAnchoredMenu<String>(
+                        context: context,
+                        anchorKey: key,
+                        actions: const [
+                          MenuAction(
+                              icon: Icons.edit, label: 'Edit', value: 'edit'),
+                          MenuAction(
+                              icon: Icons.delete,
+                              label: 'Delete',
+                              value: 'delete'),
+                        ],
+                      ),
+                    );
+                  },
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      return key;
+    }
+
+    testWidgets('a tap outside dismisses and returns null', (tester) async {
+      String? result = 'untouched';
+      await pumpHost(tester, (r) => result = r);
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+
+      // Far corner, clear of both pills.
+      await tester.tapAt(const Offset(12, 12));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit'), findsNothing);
+      expect(result, isNull);
+    });
+
+    testWidgets('choosing a pill returns its value', (tester) async {
+      String? result = 'untouched';
+      await pumpHost(tester, (r) => result = r);
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(result, 'delete');
     });
   });
 

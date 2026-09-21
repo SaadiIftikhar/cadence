@@ -8,6 +8,7 @@ import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
+import '../widgets/anchored_menu.dart';
 import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
 import '../widgets/segmented_border.dart';
@@ -31,43 +32,21 @@ class _HomeShellState extends State<HomeShell> {
 
   /// Offers the two things you can create, anchored just above the add button.
   Future<void> _showAddMenu() async {
-    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final origin = box.localToGlobal(Offset.zero);
-
-    final routine = await showGeneralDialog<bool>(
+    final routine = await showAnchoredMenu<bool>(
       context: context,
-      barrierLabel: 'Add',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 140),
-      pageBuilder: (ctx, _, _) {
-        final screen = MediaQuery.of(ctx).size;
-        return Stack(
-          children: [
-            Positioned(
-              right: screen.width - origin.dx - box.size.width,
-              bottom: screen.height - origin.dy + 14,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _AddOption(
-                    icon: Symbols.format_list_numbered,
-                    label: 'Add a routine',
-                    onTap: () => Navigator.pop(ctx, true),
-                  ),
-                  const SizedBox(height: 12),
-                  _AddOption(
-                    icon: Symbols.check_circle,
-                    label: 'Add a step',
-                    onTap: () => Navigator.pop(ctx, false),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
+      anchorKey: _fabKey,
+      actions: const [
+        MenuAction(
+          icon: Symbols.format_list_numbered,
+          label: 'Add a routine',
+          value: true,
+        ),
+        MenuAction(
+          icon: Symbols.check_circle,
+          label: 'Add a step',
+          value: false,
+        ),
+      ],
     );
 
     if (routine == null || !mounted) return;
@@ -150,48 +129,6 @@ class _BottomBar extends StatelessWidget {
               onTap: () => onSelected(2),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AddOption extends StatelessWidget {
-  const _AddOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.primary,
-      shape: AppShapes.pill,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 24, color: AppColors.onPrimary),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onPrimary,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -373,47 +310,14 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
   }
 
   Future<void> _showActions() async {
-    final box = _anchor.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final origin = box.localToGlobal(Offset.zero);
-
-    final action = await showGeneralDialog<String>(
+    final action = await showAnchoredMenu<String>(
       context: context,
-      barrierLabel: 'Actions',
-      barrierColor: Colors.black38,
-      transitionDuration: const Duration(milliseconds: 140),
-      pageBuilder: (ctx, _, _) {
-        final screen = MediaQuery.of(ctx).size;
-        return Stack(
-          children: [
-            Positioned(
-              // Hangs off the item's top-right corner, as in the mockup.
-              right: (screen.width - origin.dx - box.size.width) + 4,
-              top: origin.dy - 26,
-              child: Material(
-                color: AppColors.primary,
-                shape: AppShapes.card,
-                clipBehavior: Clip.antiAlias,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _ActionButton(
-                      icon: Symbols.edit,
-                      tooltip: 'Edit',
-                      onTap: () => Navigator.pop(ctx, 'edit'),
-                    ),
-                    _ActionButton(
-                      icon: Symbols.delete,
-                      tooltip: 'Delete',
-                      onTap: () => Navigator.pop(ctx, 'delete'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+      anchorKey: _anchor,
+      preferAbove: false,
+      actions: const [
+        MenuAction(icon: Symbols.edit, label: 'Edit', value: 'edit'),
+        MenuAction(icon: Symbols.delete, label: 'Delete', value: 'delete'),
+      ],
     );
 
     if (!mounted) return;
@@ -452,32 +356,6 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
               onTap: _open,
               onLongPress: _showActions,
             ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
-          child: Icon(icon, size: 26, color: AppColors.onPrimary),
-        ),
-      ),
     );
   }
 }
@@ -547,9 +425,16 @@ class _ImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final file = File(reminder.imagePath!);
 
+    // Same treatment as PillTile: transparent with an outline, or bare when
+    // the segmented painter draws the outline instead.
     final card = Material(
-      color: AppColors.surfaceFilled,
-      shape: AppShapes.card,
+      color: Colors.transparent,
+      shape: progress.isRoutine
+          ? AppShapes.card
+          : RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: const BorderSide(color: AppColors.outline),
+            ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -565,9 +450,9 @@ class _ImageCard extends StatelessWidget {
                   child: file.existsSync()
                       ? Image.file(file, fit: BoxFit.cover)
                       : Container(
-                          color: AppColors.primary,
+                          color: AppColors.surfaceFilled,
                           child: const Icon(Symbols.image,
-                              size: 40, color: AppColors.onPrimary),
+                              size: 40, color: AppColors.onSurfaceVariant),
                         ),
                 ),
               ),
