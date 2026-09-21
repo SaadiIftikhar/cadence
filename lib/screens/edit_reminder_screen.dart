@@ -45,7 +45,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   String _iconKey = IconCatalog.defaultReminder;
   TimeOfDay? _time;
   int _daysMask = 0;
-  bool _notifications = true;
+  bool _notifications = false;
   bool _alarm = false;
   bool _addImage = false;
   String? _imagePath;
