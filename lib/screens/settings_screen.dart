@@ -81,15 +81,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        const Text(
-          'Settings',
-          style: TextStyle(fontSize: 28, color: AppColors.onSurface),
-        ),
-        const SizedBox(height: 24),
+        // No screen heading: the bottom bar already names this tab, and Home
+        // and Calendar do not carry one either.
         const _SectionLabel('Permissions'),
         _SettingRow(
           icon: Symbols.notifications,
-          title: 'Notifications & alarms',
+          title: 'Notifications and alarms',
           subtitle: _permissionSubtitle,
           trailing: _status == null
               ? null

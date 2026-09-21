@@ -51,7 +51,7 @@ class _TimerPickerState extends State<TimerPicker> {
                   const Icon(Symbols.timer, size: 28),
                   const SizedBox(width: 18),
                   const Expanded(
-                    child: Text('Step Timer', style: TextStyle(fontSize: 20)),
+                    child: Text('Step timer', style: TextStyle(fontSize: 20)),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(right: 10),

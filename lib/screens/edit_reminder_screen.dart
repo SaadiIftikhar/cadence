@@ -15,6 +15,7 @@ import '../util/icon_catalog.dart';
 import '../widgets/cookie_timer.dart';
 import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
+import '../widgets/pulse_highlight.dart';
 import '../widgets/timer_picker.dart';
 import 'edit_step_screen.dart';
 import 'icon_picker_screen.dart';
@@ -65,6 +66,10 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   bool _titleInvalid = false;
   bool _timeInvalid = false;
 
+  /// The icon doubles as the button that changes it, which is not obvious, so
+  /// it is highlighted until the choice has actually been made once.
+  bool _iconChosen = false;
+
   bool get _isNew => widget.reminderId == null;
 
   @override
@@ -101,6 +106,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       _alarm = reminder.alarmEnabled;
       _imagePath = reminder.imagePath;
       _addImage = reminder.imagePath != null;
+      // An existing reminder already has whatever icon its owner wanted.
+      _iconChosen = true;
 
       if (_routine) {
         _title.text = reminder.title;
@@ -138,7 +145,27 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
     );
-    if (picked != null) setState(() => _iconKey = picked);
+    if (picked != null) {
+      setState(() {
+        _iconKey = picked;
+        _iconChosen = true;
+      });
+    }
+  }
+
+  /// Retargets an already-added step's icon without opening its whole editor.
+  Future<void> _pickStepIcon(int index) async {
+    final picked = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => IconPickerScreen(selected: _steps[index].iconKey),
+      ),
+    );
+    if (picked == null) return;
+    setState(() {
+      final next = [..._steps];
+      next[index].iconKey = picked;
+      _steps = next;
+    });
   }
 
   Future<void> _pickImage() async {
@@ -338,19 +365,33 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               focusedBorder: _titleInvalid ? _invalidBorder : null,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 6),
-                child: IconButton(
-                  icon: Icon(
-                    IconCatalog.resolve(_iconKey),
-                    size: 28,
-                    semanticLabel: 'Choose icon',
+                child: PulseHighlight(
+                  active: !_iconChosen,
+                  child: IconButton(
+                    icon: Icon(
+                      IconCatalog.resolve(_iconKey),
+                      size: 28,
+                      semanticLabel: 'Choose icon',
+                    ),
+                    onPressed: _pickIcon,
                   ),
-                  onPressed: _pickIcon,
                 ),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
+          if (!_iconChosen) ...[
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.only(left: 24),
+              child: Text(
+                'Tap the icon to change it',
+                style: TextStyle(
+                    fontSize: 13, color: AppColors.onSurfaceVariant),
+              ),
+            ),
+          ],
           if (!_routine) ...[
             const SizedBox(height: 18),
             TimerPicker(
@@ -392,7 +433,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           const Divider(),
           const SizedBox(height: 18),
           LabeledSwitch(
-            label: 'Add Image',
+            label: 'Add image',
             value: _addImage,
             onChanged: (v) => setState(() => _addImage = v),
           ),
@@ -425,6 +466,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                           : _steps[i].title,
                       iconKey: _steps[i].iconKey,
                       onTap: () => _editStep(i),
+                      onIconTap: () => _pickStepIcon(i),
                       trailing: _steps[i].hasTimer
                           ? Text(
                               formatDuration(
@@ -445,7 +487,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               child: OutlinedButton.icon(
                 onPressed: _addStep,
                 icon: const Icon(Symbols.add, size: 24),
-                label: const Text('Add Step'),
+                label: const Text('Add step'),
               ),
             ),
           ],

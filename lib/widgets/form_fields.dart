@@ -148,9 +148,11 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
+            // "OK" rather than "Done", which on the run screens means
+            // completing a step.
             TextButton(
               onPressed: () => Navigator.pop(ctx, local),
-              child: const Text('Done'),
+              child: const Text('OK'),
             ),
           ],
         ),

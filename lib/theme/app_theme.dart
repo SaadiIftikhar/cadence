@@ -38,9 +38,6 @@ class AppShapes {
   static final card = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(28),
   );
-  static final image = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(32),
-  );
 }
 
 ThemeData buildAppTheme() {

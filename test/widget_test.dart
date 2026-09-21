@@ -10,6 +10,7 @@ import 'package:step_reminder/widgets/anchored_menu.dart';
 import 'package:step_reminder/widgets/cookie_timer.dart';
 import 'package:step_reminder/widgets/form_fields.dart';
 import 'package:step_reminder/widgets/pill_tile.dart';
+import 'package:step_reminder/widgets/pulse_highlight.dart';
 import 'package:step_reminder/widgets/segmented_border.dart';
 
 void main() {
@@ -142,6 +143,78 @@ void main() {
           ),
         ),
       );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('PillTile icon tap', () {
+    Future<(int Function(), int Function())> pump(WidgetTester tester) async {
+      var body = 0;
+      var icon = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Center(
+              child: PillTile(
+                label: 'Stretch',
+                iconKey: 'alarm',
+                onTap: () => body++,
+                onIconTap: () => icon++,
+              ),
+            ),
+          ),
+        ),
+      );
+      return (() => body, () => icon);
+    }
+
+    testWidgets('the icon runs onIconTap and leaves onTap alone',
+        (tester) async {
+      final (body, icon) = await pump(tester);
+
+      await tester.tap(find.byIcon(IconCatalog.resolve('alarm')));
+      await tester.pumpAndSettle();
+
+      expect(icon(), 1);
+      expect(body(), 0);
+    });
+
+    testWidgets('the rest of the row still runs onTap', (tester) async {
+      final (body, icon) = await pump(tester);
+
+      await tester.tap(find.text('Stretch'));
+      await tester.pumpAndSettle();
+
+      expect(body(), 1);
+      expect(icon(), 0);
+    });
+  });
+
+  group('PulseHighlight', () {
+    testWidgets('shows the child either way and only animates when active',
+        (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PulseHighlight(active: false, child: Text('icon')),
+          ),
+        ),
+      );
+      expect(find.text('icon'), findsOneWidget);
+      // An inactive hint must not leave a repeating animation running, or the
+      // test framework would report pending timers here.
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: PulseHighlight(active: true, child: Text('icon')),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('icon'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -345,7 +418,7 @@ void main() {
 
       await tester.tap(find.text('Weekdays'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Done'));
+      await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
 
       expect(result, 0x1F);
@@ -366,7 +439,7 @@ void main() {
         // The summary names the same preset the button does.
         expect(find.text(label), findsNWidgets(2), reason: 'for $label');
 
-        await tester.tap(find.text('Done'));
+        await tester.tap(find.text('OK'));
         await tester.pumpAndSettle();
         expect(result, mask, reason: 'for $label');
       }

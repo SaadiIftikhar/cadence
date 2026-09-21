@@ -6,6 +6,7 @@ import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cookie_timer.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/pill_tile.dart';
 import 'run_step_screen.dart';
 
@@ -18,6 +19,30 @@ class RunReminderScreen extends ConsumerWidget {
   const RunReminderScreen({super.key, required this.reminderId});
 
   final int reminderId;
+
+  Future<bool> _confirmDone(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark the whole routine as done?'),
+        content: const Text(
+          'Every step will be ticked off, including any you have not run. '
+          'To leave without changing anything, go back instead.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Mark done'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
 
   Future<void> _runStep(BuildContext context, ReminderStep step) async {
     await Navigator.of(context).push<bool>(
@@ -33,9 +58,18 @@ class RunReminderScreen extends ConsumerWidget {
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => Scaffold(
-        appBar: AppBar(),
-        body: Center(child: Text('Could not load steps.\n$e')),
+      error: (_, _) => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Symbols.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const EmptyState(
+          icon: Symbols.error,
+          title: 'Could not load these steps',
+          message: 'Restarting the app usually clears this.',
+        ),
       ),
       data: (items) {
         if (items.isEmpty) {
@@ -46,7 +80,11 @@ class RunReminderScreen extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
-            body: const Center(child: Text('This reminder has no steps.')),
+            body: const EmptyState(
+              icon: Symbols.checklist,
+              title: 'Nothing to run',
+              message: 'This reminder has no steps yet.',
+            ),
           );
         }
 
@@ -112,10 +150,13 @@ class RunReminderScreen extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
-                      // Ticks off the whole routine, mirroring Done on a single
-                      // step. Backing out instead leaves progress untouched.
+                      // Confirmed, because Done here ticks off steps the user
+                      // may not have run, and the wording is what teaches that
+                      // going back is the way to leave progress alone.
                       onPressed: () async {
                         final navigator = Navigator.of(context);
+                        final confirmed = await _confirmDone(context);
+                        if (!confirmed) return;
                         await ref
                             .read(repositoryProvider)
                             .setAllCompleted(reminderId, true);

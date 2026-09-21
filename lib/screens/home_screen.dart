@@ -196,12 +196,10 @@ class ReminderListView extends ConsumerWidget {
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text('Could not load reminders.\n$e',
-              textAlign: TextAlign.center),
-        ),
+      error: (_, _) => const EmptyState(
+        icon: Symbols.error,
+        title: 'Could not load your reminders',
+        message: 'Restarting the app usually clears this.',
       ),
       data: (all) {
         if (all.isEmpty) {
@@ -286,18 +284,35 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
   }
 
   Future<void> _showActions() async {
+    final reminder = widget.reminder;
     final action = await showAnchoredMenu<String>(
       context: context,
       anchorKey: _anchor,
       preferAbove: false,
-      actions: const [
-        MenuAction(icon: Symbols.edit, label: 'Edit', value: 'edit'),
-        MenuAction(icon: Symbols.delete, label: 'Delete', value: 'delete'),
+      actions: [
+        const MenuAction(icon: Symbols.edit, label: 'Edit', value: 'edit'),
+        reminder.enabled
+            ? const MenuAction(
+                icon: Symbols.notifications_off,
+                label: 'Turn off',
+                value: 'toggle',
+              )
+            : const MenuAction(
+                icon: Symbols.notifications_active,
+                label: 'Turn on',
+                value: 'toggle',
+              ),
+        const MenuAction(icon: Symbols.delete, label: 'Delete', value: 'delete'),
       ],
     );
 
     if (!mounted) return;
     if (action == 'edit') _edit();
+    if (action == 'toggle') {
+      await ref
+          .read(repositoryProvider)
+          .setEnabled(reminder, !reminder.enabled);
+    }
     if (action == 'delete') await _confirmDelete();
   }
 

@@ -54,8 +54,6 @@ class StepProgress {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'step_reminder'));
 
-  AppDatabase.forTesting(super.executor);
-
   @override
   int get schemaVersion => 2;
 
@@ -129,18 +127,6 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteReminder(int id) =>
       (delete(reminders)..where((r) => r.id.equals(id))).go();
-
-  Future<int> upsertStep(ReminderStepsCompanion entry) async {
-    if (entry.id.present) {
-      await (update(reminderSteps)..where((s) => s.id.equals(entry.id.value)))
-          .write(entry);
-      return entry.id.value;
-    }
-    return into(reminderSteps).insert(entry);
-  }
-
-  Future<void> deleteStep(int id) =>
-      (delete(reminderSteps)..where((s) => s.id.equals(id))).go();
 
   /// Inserts one single-step and one multi-step example the first time the app
   /// runs, so the home list has something to show. Deleting them is permanent —

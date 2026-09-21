@@ -35,7 +35,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Could not load reminders.\n$e')),
+      error: (_, _) => const EmptyState(
+        icon: Symbols.error,
+        title: 'Could not load your reminders',
+        message: 'Restarting the app usually clears this.',
+      ),
       data: (all) {
         final forDay = _onDay(all, _selected);
 

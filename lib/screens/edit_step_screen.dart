@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/providers.dart';
+import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
+import '../widgets/pulse_highlight.dart';
 import '../widgets/timer_picker.dart';
 import 'icon_picker_screen.dart';
 
@@ -84,24 +86,37 @@ class _EditStepScreenState extends State<EditStepScreen> {
             style: const TextStyle(fontSize: 19),
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-              labelText: 'Step Title',
+              labelText: 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 14),
-                child: Icon(IconCatalog.resolve(_iconKey), size: 28),
+                padding: const EdgeInsets.only(left: 12, right: 6),
+                child: PulseHighlight(
+                  active: _iconKey == null,
+                  child: IconButton(
+                    icon: Icon(
+                      IconCatalog.resolve(_iconKey),
+                      size: 28,
+                      semanticLabel: 'Choose icon',
+                    ),
+                    onPressed: _pickIcon,
+                  ),
+                ),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          const SizedBox(height: 22),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: _pickIcon,
-              icon: const Icon(Symbols.add, size: 24),
-              label: Text(_iconKey == null ? 'Add Step Icon' : 'Change Step Icon'),
+          if (_iconKey == null) ...[
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.only(left: 24),
+              child: Text(
+                'Tap the icon to choose one',
+                style: TextStyle(
+                    fontSize: 13, color: AppColors.onSurfaceVariant),
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 26),
           const Divider(),
           const SizedBox(height: 26),

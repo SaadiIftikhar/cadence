@@ -28,11 +28,19 @@ class SegmentedProgressBorder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      foregroundPainter: _SegmentedBorderPainter(
-        done: done,
-        total: total,
-        shape: shape,
+    // Animating the count rather than the colour lets each arc fill in turn
+    // when several steps complete at once, as Done on a routine does.
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: done.toDouble()),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => CustomPaint(
+        foregroundPainter: _SegmentedBorderPainter(
+          done: value,
+          total: total,
+          shape: shape,
+        ),
+        child: child,
       ),
       child: child,
     );
@@ -46,7 +54,8 @@ class _SegmentedBorderPainter extends CustomPainter {
     required this.shape,
   });
 
-  final int done;
+  /// Fractional, so a part-filled arc can be mid-transition.
+  final double done;
   final int total;
   final ShapeBorder shape;
 
@@ -81,7 +90,9 @@ class _SegmentedBorderPainter extends CustomPainter {
       final end = (i + 1) * segment - gap / 2;
       if (end <= start) continue;
 
-      paint.color = i < done ? AppColors.success : AppColors.outlineDim;
+      final fill = (done - i).clamp(0.0, 1.0);
+      paint.color =
+          Color.lerp(AppColors.outlineDim, AppColors.success, fill)!;
       canvas.drawPath(metric.extractPath(start, end), paint);
     }
   }

@@ -20,7 +20,12 @@ class PillTile extends StatelessWidget {
     this.subtitle,
     this.progress,
     this.outlineColor,
+    this.onIconTap,
   });
+
+  /// Makes the leading icon its own tap target, so a row can offer a second
+  /// action without a menu. Tapping elsewhere still runs [onTap].
+  final VoidCallback? onIconTap;
 
   /// Overrides the outline colour. A single step has no segments to fill, so
   /// the whole outline turns green when it is done.
@@ -64,7 +69,18 @@ class PillTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
           child: Row(
             children: [
-              Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground),
+              if (onIconTap == null)
+                Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground)
+              else
+                InkResponse(
+                  onTap: onIconTap,
+                  radius: 28,
+                  child: Icon(
+                    IconCatalog.resolve(iconKey),
+                    size: 26,
+                    color: foreground,
+                  ),
+                ),
               const SizedBox(width: 22),
               Expanded(
                 child: Column(

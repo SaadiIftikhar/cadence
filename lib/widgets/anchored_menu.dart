@@ -68,7 +68,7 @@ Future<T?> showAnchoredMenu<T>({
               children: [
                 for (var i = 0; i < actions.length; i++) ...[
                   if (i > 0) const SizedBox(height: spacing),
-                  ActionPill(
+                  _ActionPill(
                     icon: actions[i].icon,
                     label: actions[i].label,
                     onTap: () => Navigator.pop(ctx, actions[i].value),
@@ -83,9 +83,8 @@ Future<T?> showAnchoredMenu<T>({
   );
 }
 
-class ActionPill extends StatelessWidget {
-  const ActionPill({
-    super.key,
+class _ActionPill extends StatelessWidget {
+  const _ActionPill({
     required this.icon,
     required this.label,
     required this.onTap,
