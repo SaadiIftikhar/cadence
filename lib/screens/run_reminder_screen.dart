@@ -104,7 +104,7 @@ class RunReminderScreen extends ConsumerWidget {
                           ? null
                           : () => ref
                               .read(repositoryProvider)
-                              .clearCompletion(reminderId),
+                              .setAllCompleted(reminderId, false),
                       icon: const Icon(Symbols.refresh, size: 24),
                       label: const Text('Reset'),
                     ),
@@ -112,7 +112,15 @@ class RunReminderScreen extends ConsumerWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pop(context),
+                      // Ticks off the whole routine, mirroring Done on a single
+                      // step. Backing out instead leaves progress untouched.
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        await ref
+                            .read(repositoryProvider)
+                            .setAllCompleted(reminderId, true);
+                        navigator.pop();
+                      },
                       icon: Icon(
                         Symbols.done_all,
                         size: 24,

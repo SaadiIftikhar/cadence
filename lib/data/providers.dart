@@ -127,8 +127,8 @@ class ReminderRepository {
   Future<void> markStep(int stepId, bool completed) =>
       _db.setStepCompleted(stepId, completed);
 
-  Future<void> clearCompletion(int reminderId) =>
-      _db.clearCompletion(reminderId);
+  Future<void> setAllCompleted(int reminderId, bool completed) =>
+      _db.setAllCompleted(reminderId, completed);
 
   Future<List<StepDraft>> draftsFor(int reminderId) async {
     final rows = await _db.stepsFor(reminderId);

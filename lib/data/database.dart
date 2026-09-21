@@ -75,9 +75,9 @@ class AppDatabase extends _$AppDatabase {
       (update(reminderSteps)..where((s) => s.id.equals(stepId)))
           .write(ReminderStepsCompanion(completed: Value(completed)));
 
-  Future<void> clearCompletion(int reminderId) =>
+  Future<void> setAllCompleted(int reminderId, bool completed) =>
       (update(reminderSteps)..where((s) => s.reminderId.equals(reminderId)))
-          .write(const ReminderStepsCompanion(completed: Value(false)));
+          .write(ReminderStepsCompanion(completed: Value(completed)));
 
   Stream<List<Reminder>> watchReminders() =>
       (select(reminders)..orderBy([(r) => OrderingTerm(expression: r.hour), (r) => OrderingTerm(expression: r.minute)]))
