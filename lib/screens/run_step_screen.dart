@@ -130,17 +130,21 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _reset,
-                    icon: const Icon(Symbols.refresh, size: 24),
-                    label: const Text('Reset'),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _reset,
+                      icon: const Icon(Symbols.refresh, size: 24),
+                      label: const Text('Reset'),
+                    ),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _done,
-                    icon: const Icon(Symbols.done_all, size: 24),
-                    label: const Text('Done'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _done,
+                      icon: const Icon(Symbols.done_all, size: 24),
+                      label: const Text('Done'),
+                    ),
                   ),
                 ],
               ),

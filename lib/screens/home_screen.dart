@@ -425,16 +425,17 @@ class _ImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final file = File(reminder.imagePath!);
 
+    // One shape drives both the card and its progress border, so the arcs
+    // always trace the corner the card actually has.
+    final shape = AppShapes.card;
+
     // Same treatment as PillTile: transparent with an outline, or bare when
     // the segmented painter draws the outline instead.
     final card = Material(
       color: Colors.transparent,
       shape: progress.isRoutine
-          ? AppShapes.card
-          : RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: const BorderSide(color: AppColors.outline),
-            ),
+          ? shape
+          : shape.copyWith(side: const BorderSide(color: AppColors.outline)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -498,7 +499,7 @@ class _ImageCard extends StatelessWidget {
     return SegmentedProgressBorder(
       done: progress.done,
       total: progress.total,
-      radius: 28,
+      shape: shape,
       child: card,
     );
   }

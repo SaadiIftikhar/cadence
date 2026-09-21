@@ -4,23 +4,26 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// Draws the child's stadium outline as one arc per step, filling the arcs
-/// that are done. Reading the border tells you how many steps remain without
-/// relying on colour, which a red-to-green ramp could not do.
+/// Draws the child's outline as one arc per step, filling the arcs that are
+/// done. Reading the border tells you how many steps remain without relying on
+/// colour, which a red-to-green ramp could not do.
 class SegmentedProgressBorder extends StatelessWidget {
   const SegmentedProgressBorder({
     super.key,
     required this.done,
     required this.total,
+    required this.shape,
     required this.child,
-    this.radius,
   });
 
   final int done;
   final int total;
 
-  /// Corner radius of the outline. Defaults to a stadium.
-  final double? radius;
+  /// The same shape the child is clipped to. Tracing it directly means the
+  /// arcs follow a pill, a rounded image card, or anything else without the
+  /// two definitions ever drifting apart.
+  final ShapeBorder shape;
+
   final Widget child;
 
   @override
@@ -29,7 +32,7 @@ class SegmentedProgressBorder extends StatelessWidget {
       foregroundPainter: _SegmentedBorderPainter(
         done: done,
         total: total,
-        radius: radius,
+        shape: shape,
       ),
       child: child,
     );
@@ -40,12 +43,12 @@ class _SegmentedBorderPainter extends CustomPainter {
   _SegmentedBorderPainter({
     required this.done,
     required this.total,
-    this.radius,
+    required this.shape,
   });
 
   final int done;
   final int total;
-  final double? radius;
+  final ShapeBorder shape;
 
   static const _stroke = 2.5;
   static const _maxGap = 10.0;
@@ -57,17 +60,10 @@ class _SegmentedBorderPainter extends CustomPainter {
     final bounds = (Offset.zero & size).deflate(_stroke / 2);
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    final outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          bounds,
-          Radius.circular(radius ?? bounds.height / 2),
-        ),
-      );
-
-    final metrics = outline.computeMetrics().toList();
+    final metrics = shape.getOuterPath(bounds).computeMetrics().toList();
     if (metrics.isEmpty) return;
     final metric = metrics.first;
+    if (metric.length <= 0) return;
 
     final segment = metric.length / total;
     // The gap shrinks as segments multiply, so a long routine degrades into a
@@ -92,5 +88,5 @@ class _SegmentedBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SegmentedBorderPainter old) =>
-      old.done != done || old.total != total || old.radius != radius;
+      old.done != done || old.total != total || old.shape != shape;
 }

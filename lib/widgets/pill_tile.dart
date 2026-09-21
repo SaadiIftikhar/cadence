@@ -101,6 +101,7 @@ class PillTile extends StatelessWidget {
     return SegmentedProgressBorder(
       done: segments.done,
       total: segments.total,
+      shape: AppShapes.pill,
       child: tile,
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:step_reminder/data/database.dart';
+import 'package:step_reminder/screens/run_step_screen.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
 import 'package:step_reminder/widgets/anchored_menu.dart';
@@ -92,6 +94,57 @@ void main() {
     testWidgets('a single step gets no segmented border', (tester) async {
       await pumpPill(tester, 0, 1);
       expect(find.byType(SegmentedProgressBorder), findsNothing);
+    });
+
+    testWidgets('traces a rounded card, not just a pill', (tester) async {
+      // The image-card case: a tall rounded rectangle rather than a stadium.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Center(
+              child: SegmentedProgressBorder(
+                done: 1,
+                total: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const SizedBox(width: 300, height: 220),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('Run step screen', () {
+    testWidgets('Reset and Done are the same width', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: RunStepScreen(
+              step: ReminderStep(
+                id: 1,
+                reminderId: 1,
+                title: 'Stretch',
+                iconKey: null,
+                timerSeconds: 300,
+                position: 0,
+                completed: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final reset =
+          tester.getSize(find.widgetWithText(OutlinedButton, 'Reset'));
+      final done = tester.getSize(find.widgetWithText(OutlinedButton, 'Done'));
+      expect(reset.width, done.width);
     });
   });
 
