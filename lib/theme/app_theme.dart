@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 
+/// Shape of the image on a home card. The cropper locks to the same numbers,
+/// so whatever is framed while cropping is exactly what the card shows.
+const double kCardImageRatioX = 16;
+const double kCardImageRatioY = 9;
+const double kCardImageAspect = kCardImageRatioX / kCardImageRatioY;
+
 /// Palette sampled from the design mockups.
 class AppColors {
   static const background = Color(0xFF121316);

@@ -447,7 +447,7 @@ class _ImageCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(22),
                 child: AspectRatio(
-                  aspectRatio: 16 / 9,
+                  aspectRatio: kCardImageAspect,
                   child: file.existsSync()
                       ? Image.file(file, fit: BoxFit.cover)
                       : Container(

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:path/path.dart' as p;
@@ -131,17 +132,47 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _pickImage() async {
-    final file = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, maxWidth: 1600);
-    if (file == null) return;
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    // Cropped to the card's exact ratio so nothing the user framed gets
+    // silently cut off by the home list.
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(
+        ratioX: kCardImageRatioX,
+        ratioY: kCardImageRatioY,
+      ),
+      maxWidth: 1600,
+      compressFormat: ImageCompressFormat.jpg,
+      compressQuality: 90,
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop image',
+          toolbarColor: AppColors.background,
+          toolbarWidgetColor: AppColors.onSurface,
+          backgroundColor: AppColors.background,
+          activeControlsWidgetColor: AppColors.primary,
+          cropFrameColor: AppColors.primary,
+          cropGridColor: AppColors.outlineDim,
+          lockAspectRatio: true,
+        ),
+        IOSUiSettings(
+          title: 'Crop image',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+        ),
+      ],
+    );
+    if (cropped == null) return;
 
     // Copied into app storage so the reminder survives the gallery item moving.
     final dir = await getApplicationDocumentsDirectory();
     final dest = p.join(
       dir.path,
-      'reminder_${DateTime.now().millisecondsSinceEpoch}${p.extension(file.path)}',
+      'reminder_${DateTime.now().millisecondsSinceEpoch}.jpg',
     );
-    await File(file.path).copy(dest);
+    await File(cropped.path).copy(dest);
     if (!mounted) return;
     setState(() => _imagePath = dest);
   }
@@ -335,7 +366,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ),
           if (_addImage) ...[
             const SizedBox(height: 18),
-            Center(child: _ImagePickerBox(path: _imagePath, onTap: _pickImage)),
+            _ImagePickerBox(path: _imagePath, onTap: _pickImage),
           ],
           if (_routine) ...[
             const SizedBox(height: 22),
@@ -405,16 +436,19 @@ class _ImagePickerBox extends StatelessWidget {
 
     return Material(
       color: AppColors.surfaceFilled,
-      borderRadius: BorderRadius.circular(32),
+      borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          width: 220,
-          height: 220,
+        // Same ratio as the home card, so this preview is a true preview.
+        child: AspectRatio(
+          aspectRatio: kCardImageAspect,
           child: hasImage
               ? Image.file(file, fit: BoxFit.cover)
-              : const Icon(Symbols.image, size: 52, color: AppColors.onSurface),
+              : const Center(
+                  child: Icon(Symbols.image,
+                      size: 52, color: AppColors.onSurfaceVariant),
+                ),
         ),
       ),
     );

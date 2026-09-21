@@ -38,6 +38,12 @@
             </intent-filter>
         </activity>
 
+        <!-- image_cropper: uCrop runs as its own activity. -->
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
         <!-- flutter_local_notifications: delivers scheduled alarms, re-arms them
              after reboot, and handles notification action taps. -->
         <receiver
