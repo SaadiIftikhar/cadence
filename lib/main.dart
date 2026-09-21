@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/providers.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/run_reminder_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
@@ -19,11 +21,20 @@ Future<void> main() async {
 
   await NotificationService.instance.init();
 
-  runApp(const ProviderScope(child: StepReminderApp()));
+  final prefs = await SharedPreferences.getInstance();
+  final seenOnboarding = prefs.getBool(_seenOnboardingKey) ?? false;
+
+  runApp(
+    ProviderScope(child: StepReminderApp(seenOnboarding: seenOnboarding)),
+  );
 }
 
+const _seenOnboardingKey = 'seen_onboarding';
+
 class StepReminderApp extends ConsumerStatefulWidget {
-  const StepReminderApp({super.key});
+  const StepReminderApp({super.key, required this.seenOnboarding});
+
+  final bool seenOnboarding;
 
   @override
   ConsumerState<StepReminderApp> createState() => _StepReminderAppState();
@@ -31,16 +42,13 @@ class StepReminderApp extends ConsumerStatefulWidget {
 
 class _StepReminderAppState extends ConsumerState<StepReminderApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  late bool _seenOnboarding = widget.seenOnboarding;
 
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Asked up front, like any app that needs notifications to be useful.
-      // A no-op once the choice has been made.
-      await NotificationService.instance.requestNotificationsIfUndecided();
-
       // Android drops scheduled alarms on reboot and reinstall, so re-arm them.
       await ref.read(repositoryProvider).rescheduleAll();
     });
@@ -48,6 +56,19 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
     NotificationService.instance.launchReminderId
         .addListener(_openLaunchedReminder);
     _openLaunchedReminder();
+  }
+
+  Future<void> _finishOnboarding({required bool allowNotifications}) async {
+    // Swapping what `home` builds, rather than pushing, leaves no route to go
+    // back to: once the user is home, back cannot return to the introduction.
+    setState(() => _seenOnboarding = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_seenOnboardingKey, true);
+
+    if (allowNotifications) {
+      await NotificationService.instance.requestNotificationsIfUndecided();
+    }
   }
 
   @override
@@ -76,7 +97,9 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
       debugShowCheckedModeBanner: false,
       navigatorKey: _navigatorKey,
       theme: buildAppTheme(),
-      home: const HomeShell(),
+      home: _seenOnboarding
+          ? const HomeShell()
+          : OnboardingScreen(onFinished: _finishOnboarding),
     );
   }
 }
