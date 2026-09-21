@@ -15,19 +15,34 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool? _exactAlarms;
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
+  PermissionStatus? _status;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _refresh();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Granting exact alarms happens in system settings, so the answer only
+    // arrives once the user comes back.
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
   Future<void> _refresh() async {
-    final exact = await NotificationService.instance.canScheduleExact();
-    if (mounted) setState(() => _exactAlarms = exact);
+    final status = await NotificationService.instance.currentStatus();
+    if (mounted) setState(() => _status = status);
   }
 
   Future<void> _request() async {
@@ -35,12 +50,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final status = await NotificationService.instance.requestPermissions();
     if (!mounted) return;
     setState(() {
-      _exactAlarms = status.exactAlarms;
+      _status = status;
       _busy = false;
     });
-    _toast(status.allGranted
-        ? 'Permissions granted.'
-        : 'Some permissions are still blocked.');
+    if (!status.allGranted) {
+      _toast('Still blocked — you can change it in system settings.');
+    }
   }
 
   Future<void> _rescheduleAll() async {
@@ -49,6 +64,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) return;
     setState(() => _busy = false);
     _toast('All reminders rescheduled.');
+  }
+
+  String get _permissionSubtitle {
+    final status = _status;
+    if (status == null) return 'Checking…';
+    if (status.allGranted) return 'Notifications and exact alarms allowed';
+    if (!status.notifications) return 'Notifications are blocked';
+    return 'Exact alarms blocked — reminders may fire late';
   }
 
   void _toast(String message) {
@@ -73,15 +96,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _SettingRow(
           icon: Symbols.notifications,
           title: 'Notifications & alarms',
-          subtitle: switch (_exactAlarms) {
-            null => 'Checking…',
-            true => 'Exact alarms allowed',
-            false => 'Exact alarms blocked — reminders may fire late',
-          },
-          trailing: TextButton(
-            onPressed: _busy ? null : _request,
-            child: const Text('Grant'),
-          ),
+          subtitle: _permissionSubtitle,
+          trailing: _status == null
+              ? null
+              : _status!.allGranted
+                  // Nothing left to ask for, so the button becomes a receipt.
+                  ? const Icon(Symbols.check_circle,
+                      size: 26, color: AppColors.success)
+                  : TextButton(
+                      onPressed: _busy ? null : _request,
+                      child: const Text('Grant'),
+                    ),
         ),
         const SizedBox(height: 26),
         const _SectionLabel('Maintenance'),

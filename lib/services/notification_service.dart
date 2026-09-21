@@ -93,6 +93,30 @@ class NotificationService {
     return PermissionStatus(notifications, exact);
   }
 
+  /// What is granted right now, without prompting for anything.
+  Future<PermissionStatus> currentStatus() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return const PermissionStatus(true, true);
+
+    return PermissionStatus(
+      await android.areNotificationsEnabled() ?? true,
+      await android.canScheduleExactNotifications() ?? true,
+    );
+  }
+
+  /// Asks for the notification permission on first launch, the way most apps
+  /// do. Deliberately leaves exact alarms alone: that request opens a system
+  /// settings page, which would be hostile to throw at someone unprompted.
+  Future<void> requestNotificationsIfUndecided() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android == null) return;
+
+    if (await android.areNotificationsEnabled() ?? false) return;
+    await android.requestNotificationsPermission();
+  }
+
   Future<bool> canScheduleExact() async {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
