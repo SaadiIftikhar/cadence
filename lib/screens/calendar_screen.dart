@@ -99,6 +99,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             const SizedBox(height: 20),
             Text(
               DateFormat('EEEE, d MMMM').format(_selected),
+              textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 20, color: AppColors.onSurface),
             ),
             const SizedBox(height: 14),
