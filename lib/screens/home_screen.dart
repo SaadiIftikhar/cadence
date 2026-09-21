@@ -24,12 +24,57 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  final _fabKey = GlobalKey();
 
   void _onDestination(int i) => setState(() => _index = i);
 
-  void _openEditor() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EditReminderScreen()),
+  /// Offers the two things you can create, anchored just above the add button.
+  Future<void> _showAddMenu() async {
+    final box = _fabKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final origin = box.localToGlobal(Offset.zero);
+
+    final routine = await showGeneralDialog<bool>(
+      context: context,
+      barrierLabel: 'Add',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 140),
+      pageBuilder: (ctx, _, _) {
+        final screen = MediaQuery.of(ctx).size;
+        return Stack(
+          children: [
+            Positioned(
+              right: screen.width - origin.dx - box.size.width,
+              bottom: screen.height - origin.dy + 14,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _AddOption(
+                    icon: Symbols.format_list_numbered,
+                    label: 'Add a routine',
+                    onTap: () => Navigator.pop(ctx, true),
+                  ),
+                  const SizedBox(height: 12),
+                  _AddOption(
+                    icon: Symbols.check_circle,
+                    label: 'Add a step',
+                    onTap: () => Navigator.pop(ctx, false),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (routine == null || !mounted) return;
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EditReminderScreen(isRoutine: routine),
+      ),
     );
   }
 
@@ -49,8 +94,9 @@ class _HomeShellState extends State<HomeShell> {
       ),
       floatingActionButton: _index == 0
           ? FloatingActionButton(
-              onPressed: _openEditor,
-              tooltip: 'New reminder',
+              key: _fabKey,
+              onPressed: _showAddMenu,
+              tooltip: 'Add',
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
               elevation: 0,
@@ -103,6 +149,48 @@ class _BottomBar extends StatelessWidget {
               onTap: () => onSelected(2),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddOption extends StatelessWidget {
+  const _AddOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.primary,
+      shape: AppShapes.pill,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 24, color: AppColors.onPrimary),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

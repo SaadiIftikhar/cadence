@@ -14,13 +14,24 @@ import '../util/icon_catalog.dart';
 import '../widgets/cookie_timer.dart';
 import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
+import '../widgets/timer_picker.dart';
 import 'edit_step_screen.dart';
 import 'icon_picker_screen.dart';
 
+/// Creates or edits either a routine (a named checklist of steps) or a single
+/// step (one action, which needs no separate name — its own title is what the
+/// home list shows).
 class EditReminderScreen extends ConsumerStatefulWidget {
-  const EditReminderScreen({super.key, this.reminderId});
+  const EditReminderScreen({
+    super.key,
+    this.reminderId,
+    this.isRoutine = false,
+  });
 
   final int? reminderId;
+
+  /// Only consulted when creating; an existing reminder knows which it is.
+  final bool isRoutine;
 
   @override
   ConsumerState<EditReminderScreen> createState() => _EditReminderScreenState();
@@ -28,17 +39,22 @@ class EditReminderScreen extends ConsumerStatefulWidget {
 
 class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   final _title = TextEditingController();
-  final _quickStep = TextEditingController();
 
+  late bool _routine = widget.isRoutine;
   String _iconKey = IconCatalog.defaultReminder;
   TimeOfDay? _time;
   int _daysMask = 0;
   bool _notifications = true;
   bool _alarm = false;
-  bool _multiStep = false;
   bool _addImage = false;
   String? _imagePath;
+
+  /// Routine mode only.
   List<StepDraft> _steps = [];
+
+  /// Single-step mode only. Held as a draft so its id and completion survive.
+  StepDraft _single = StepDraft();
+  int _stepSeconds = 0;
 
   bool _loading = true;
   bool _saving = false;
@@ -54,7 +70,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   @override
   void dispose() {
     _title.dispose();
-    _quickStep.dispose();
     super.dispose();
   }
 
@@ -64,24 +79,33 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       setState(() => _loading = false);
       return;
     }
-    final db = ref.read(databaseProvider);
-    final reminder = await db.findReminder(id);
+    final reminder = await ref.read(databaseProvider).findReminder(id);
     final steps = await ref.read(repositoryProvider).draftsFor(id);
-    if (!mounted || reminder == null) {
-      if (mounted) setState(() => _loading = false);
+    if (!mounted) return;
+    if (reminder == null) {
+      setState(() => _loading = false);
       return;
     }
+
     setState(() {
-      _title.text = reminder.title;
-      _iconKey = reminder.iconKey;
+      _routine = reminder.multiStep;
       _time = TimeOfDay(hour: reminder.hour, minute: reminder.minute);
       _daysMask = reminder.daysMask;
       _notifications = reminder.notificationsEnabled;
       _alarm = reminder.alarmEnabled;
-      _multiStep = reminder.multiStep;
       _imagePath = reminder.imagePath;
       _addImage = reminder.imagePath != null;
-      _steps = steps;
+
+      if (_routine) {
+        _title.text = reminder.title;
+        _iconKey = reminder.iconKey;
+        _steps = steps;
+      } else {
+        _single = steps.isNotEmpty ? steps.first : StepDraft();
+        _title.text = _single.title;
+        _iconKey = _single.iconKey ?? reminder.iconKey;
+        _stepSeconds = _single.timerSeconds ?? 0;
+      }
       _loading = false;
     });
   }
@@ -99,7 +123,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     if (picked != null) setState(() => _daysMask = picked);
   }
 
-  Future<void> _pickReminderIcon() async {
+  Future<void> _pickIcon() async {
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
     );
@@ -148,20 +172,13 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     });
   }
 
-  void _quickAddStep(String value) {
-    final name = value.trim();
-    if (name.isEmpty) return;
-    setState(() {
-      _steps = [..._steps, StepDraft(title: name)];
-      _quickStep.clear();
-    });
-  }
-
   Future<void> _save() async {
-    if (_steps.isEmpty && _quickStep.text.trim().isNotEmpty) {
-      _quickAddStep(_quickStep.text);
+    final title = _title.text.trim();
+    if (title.isEmpty) {
+      _toast(_routine ? 'Give the routine a name.' : 'Give the step a title.');
+      return;
     }
-    if (_steps.isEmpty) {
+    if (_routine && _steps.isEmpty) {
       _toast('Add at least one step.');
       return;
     }
@@ -181,18 +198,31 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       }
     }
 
+    final List<StepDraft> steps;
+    if (_routine) {
+      steps = _steps;
+    } else {
+      _single
+        ..title = title
+        ..iconKey = _iconKey
+        ..timerSeconds = _stepSeconds > 0 ? _stepSeconds : null;
+      steps = [_single];
+    }
+
     await ref.read(repositoryProvider).save(
           id: widget.reminderId,
-          title: _title.text.trim(),
+          // A single step has no separate name, so the reminder mirrors it and
+          // the home list keeps reading one field either way.
+          title: title,
           iconKey: _iconKey,
           hour: _time!.hour,
           minute: _time!.minute,
           daysMask: _daysMask,
           notificationsEnabled: _notifications,
           alarmEnabled: _alarm,
-          multiStep: _multiStep,
+          multiStep: _routine,
           imagePath: _addImage ? _imagePath : null,
-          steps: _multiStep ? _steps : _steps.take(1).toList(),
+          steps: steps,
         );
 
     if (mounted) Navigator.pop(context);
@@ -204,13 +234,16 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String get _screenTitle {
+    if (_routine) return _isNew ? 'New routine' : 'Edit routine';
+    return _isNew ? 'New step' : 'Edit step';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    final canAddMore = _multiStep || _steps.isEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -218,7 +251,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           icon: const Icon(Symbols.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(_isNew ? 'New reminder' : 'Edit reminder'),
+        title: Text(_screenTitle),
         actions: [
           IconButton(
             icon: _saving
@@ -242,26 +275,27 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             style: const TextStyle(fontSize: 19),
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-              labelText: 'Reminder name',
+              labelText: _routine ? 'Routine name' : 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 6),
                 child: IconButton(
                   icon: Icon(IconCatalog.resolve(_iconKey), size: 28),
                   tooltip: 'Choose icon',
-                  onPressed: _pickReminderIcon,
+                  onPressed: _pickIcon,
                 ),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          const SizedBox(height: 14),
-          LabeledSwitch(
-            label: 'Multiple Steps',
-            value: _multiStep,
-            onChanged: (v) => setState(() => _multiStep = v),
-          ),
+          if (!_routine) ...[
+            const SizedBox(height: 18),
+            TimerPicker(
+              seconds: _stepSeconds,
+              onChanged: (v) => setState(() => _stepSeconds = v),
+            ),
+          ],
           const SizedBox(height: 18),
           ValuePill(
             icon: Symbols.schedule,
@@ -303,69 +337,55 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             const SizedBox(height: 18),
             Center(child: _ImagePickerBox(path: _imagePath, onTap: _pickImage)),
           ],
-          const SizedBox(height: 22),
-          const Divider(),
-          const SizedBox(height: 22),
-          if (_steps.isEmpty)
-            TextField(
-              controller: _quickStep,
-              style: const TextStyle(fontSize: 19),
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.done,
-              onSubmitted: _quickAddStep,
-              decoration: const InputDecoration(
-                hintText: 'Step name',
-                prefixIcon: Padding(
-                  padding: EdgeInsets.only(left: 22, right: 16),
-                  child: Icon(Symbols.check_circle, size: 28),
+          if (_routine) ...[
+            const SizedBox(height: 22),
+            const Divider(),
+            const SizedBox(height: 22),
+            if (_steps.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  'No steps yet.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 15, color: AppColors.onSurfaceVariant),
                 ),
-                prefixIconConstraints:
-                    BoxConstraints(minWidth: 0, minHeight: 0),
-              ),
-            )
-          else
-            Column(
-              children: [
-                for (var i = 0; i < _steps.length; i++) ...[
-                  if (i > 0) const SizedBox(height: 12),
-                  PillTile(
-                    label: _steps[i].title.isEmpty
-                        ? 'Untitled step'
-                        : _steps[i].title,
-                    iconKey: _steps[i].iconKey,
-                    onTap: () => _editStep(i),
-                    trailing: _steps[i].hasTimer
-                        ? Text(
-                            formatDuration(
-                                Duration(seconds: _steps[i].timerSeconds!)),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )
-                        : null,
-                  ),
+              )
+            else
+              Column(
+                children: [
+                  for (var i = 0; i < _steps.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 12),
+                    PillTile(
+                      label: _steps[i].title.isEmpty
+                          ? 'Untitled step'
+                          : _steps[i].title,
+                      iconKey: _steps[i].iconKey,
+                      onTap: () => _editStep(i),
+                      trailing: _steps[i].hasTimer
+                          ? Text(
+                              formatDuration(
+                                  Duration(seconds: _steps[i].timerSeconds!)),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          const SizedBox(height: 20),
-          if (canAddMore)
+              ),
+            const SizedBox(height: 20),
             Center(
               child: OutlinedButton.icon(
                 onPressed: _addStep,
                 icon: const Icon(Symbols.add, size: 24),
                 label: const Text('Add Step'),
               ),
-            )
-          else
-            const Center(
-              child: Text(
-                'Turn on Multiple Steps to add more.',
-                style:
-                    TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
-              ),
             ),
+          ],
         ],
       ),
     );

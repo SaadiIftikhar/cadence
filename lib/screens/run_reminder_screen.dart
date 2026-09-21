@@ -53,7 +53,7 @@ class RunReminderScreen extends ConsumerWidget {
         if (items.length == 1) return RunStepScreen(step: items.first);
 
         final doneCount = items.where((s) => s.completed).length;
-        final currentIndex = items.indexWhere((s) => !s.completed);
+        final allDone = doneCount == items.length;
 
         return Scaffold(
           appBar: AppBar(
@@ -74,7 +74,6 @@ class RunReminderScreen extends ConsumerWidget {
                     ? 'Step ${i + 1}'
                     : step.title.trim(),
                 iconKey: step.iconKey,
-                filled: i == currentIndex,
                 dimmed: step.completed,
                 onTap: () => _runStep(context, step),
                 trailing: step.completed
@@ -114,7 +113,7 @@ class RunReminderScreen extends ConsumerWidget {
                     icon: Icon(
                       Symbols.done_all,
                       size: 24,
-                      color: currentIndex == -1 ? AppColors.success : null,
+                      color: allDone ? AppColors.success : null,
                     ),
                     label: const Text('Done'),
                   ),

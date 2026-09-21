@@ -143,10 +143,11 @@ class AppDatabase extends _$AppDatabase {
           daysMask: const Value(0x1F), // weekdays
         ),
       );
+      // A single step has no separate name, so both rows carry the same title.
       await into(reminderSteps).insert(
         ReminderStepsCompanion.insert(
           reminderId: vitamins,
-          title: const Value('Vitamin D with breakfast'),
+          title: const Value('Take vitamins'),
           iconKey: const Value('medication'),
         ),
       );
