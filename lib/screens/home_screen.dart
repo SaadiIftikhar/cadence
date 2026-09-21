@@ -24,15 +24,12 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
-  void _onDestination(int i) {
-    if (i == 0) {
-      setState(() => _index = 0);
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const EditReminderScreen()),
-      );
-      return;
-    }
-    setState(() => _index = i);
+  void _onDestination(int i) => setState(() => _index = i);
+
+  void _openEditor() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EditReminderScreen()),
+    );
   }
 
   @override
@@ -49,6 +46,19 @@ class _HomeShellState extends State<HomeShell> {
           ],
         ),
       ),
+      floatingActionButton: _index == 0
+          ? FloatingActionButton(
+              onPressed: _openEditor,
+              tooltip: 'New reminder',
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.onPrimary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Symbols.add, size: 30),
+            )
+          : null,
       bottomNavigationBar: _BottomBar(index: _index, onSelected: _onDestination),
     );
   }
@@ -74,8 +84,8 @@ class _BottomBar extends StatelessWidget {
         child: Row(
           children: [
             _NavItem(
-              icon: Symbols.add,
-              label: 'Add',
+              icon: Symbols.home,
+              label: 'Home',
               selected: index == 0,
               onTap: () => onSelected(0),
             ),
@@ -167,7 +177,8 @@ class ReminderListView extends ConsumerWidget {
       data: (items) {
         if (items.isEmpty) return const _EmptyState();
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+          // Bottom padding clears the floating add button.
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
           itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 16),
           itemBuilder: (context, i) => _ReminderEntry(reminder: items[i]),
@@ -197,7 +208,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Tap Add to create one.',
+              'Tap + to create one.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: AppColors.onSurfaceVariant),
             ),
