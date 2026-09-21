@@ -41,7 +41,6 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
       // A no-op once the choice has been made.
       await NotificationService.instance.requestNotificationsIfUndecided();
 
-      await ref.read(databaseProvider).seedSamplesIfEmpty();
       // Android drops scheduled alarms on reboot and reinstall, so re-arm them.
       await ref.read(repositoryProvider).rescheduleAll();
     });
