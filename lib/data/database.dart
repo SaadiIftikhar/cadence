@@ -132,6 +132,13 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteReminder(int id) =>
       (delete(reminders)..where((r) => r.id.equals(id))).go();
 
+  /// Steps go with them, through the cascade on their foreign key.
+  Future<void> deleteAllReminders() => delete(reminders).go();
+
+  Future<List<Reminder>> allReminders() =>
+      (select(reminders)..orderBy([(r) => OrderingTerm(expression: r.hour)]))
+          .get();
+
   Future<void> replaceSteps(
       int reminderId, List<ReminderStepsCompanion> entries) async {
     await transaction(() async {

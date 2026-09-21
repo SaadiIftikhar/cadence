@@ -16,6 +16,10 @@ class SegmentedProgressBorder extends StatelessWidget {
     required this.child,
   });
 
+  /// Stroke the arcs are drawn with. A plain outline that means the same
+  /// thing, such as a lone step being finished, matches it.
+  static const strokeWidth = 2.5;
+
   final int done;
   final int total;
 
@@ -59,7 +63,7 @@ class _SegmentedBorderPainter extends CustomPainter {
   final int total;
   final ShapeBorder shape;
 
-  static const _stroke = 2.5;
+  static const _stroke = SegmentedProgressBorder.strokeWidth;
   static const _maxGap = 10.0;
 
   @override

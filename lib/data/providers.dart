@@ -1,7 +1,9 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../services/notification_service.dart';
+import 'backup_service.dart';
 import 'database.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -25,6 +27,13 @@ final stepProgressProvider = StreamProvider<Map<int, StepProgress>>(
 final repositoryProvider = Provider<ReminderRepository>(
   (ref) => ReminderRepository(ref.watch(databaseProvider)),
 );
+
+final backupServiceProvider = FutureProvider<BackupService>((ref) async {
+  return BackupService(
+    ref.watch(databaseProvider),
+    imageDirectory: await getApplicationDocumentsDirectory(),
+  );
+});
 
 /// Home order: still to do first, earliest time of day first within that, and
 /// anything finished pushed to the bottom keeping the same time order.

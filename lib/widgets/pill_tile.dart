@@ -59,7 +59,14 @@ class PillTile extends StatelessWidget {
       shape: (filled || showSegments)
           ? AppShapes.pill
           : StadiumBorder(
-              side: BorderSide(color: outlineColor ?? AppColors.outline),
+              side: BorderSide(
+                color: outlineColor ?? AppColors.outline,
+                // A coloured outline stands in for the segmented arcs, so it
+                // carries their weight rather than a hairline's.
+                width: outlineColor == null
+                    ? 1
+                    : SegmentedProgressBorder.strokeWidth,
+              ),
             ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

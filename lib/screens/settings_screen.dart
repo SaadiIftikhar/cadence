@@ -1,7 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../data/backup.dart';
+import '../data/backup_service.dart';
 import '../data/providers.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -62,6 +69,88 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     await ref.read(repositoryProvider).rescheduleAll();
   }
 
+  Future<void> _export() async {
+    setState(() => _busy = true);
+    try {
+      final service = await ref.read(backupServiceProvider.future);
+      final json = await service.export();
+      final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      final saved = await FilePicker.saveFile(
+        fileName: 'step-reminder-$stamp.json',
+        bytes: Uint8List.fromList(utf8.encode(json)),
+        mimeType: 'application/json',
+        dialogTitle: 'Save backup',
+      );
+      if (!mounted) return;
+      if (saved != null) _toast('Backup saved.');
+    } catch (_) {
+      if (mounted) _toast('Could not save the backup.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _import() async {
+    final picked = await FilePicker.pickFiles(
+      dialogTitle: 'Choose a backup',
+      type: FileType.custom,
+      allowedExtensions: const ['json'],
+    );
+    if (picked.isEmpty || !mounted) return;
+
+    final existing = ref.read(remindersProvider).value ?? const [];
+    final mode = existing.isEmpty
+        ? ImportMode.add
+        : await _askImportMode(existing.length);
+    if (mode == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final source = await picked.first.xFile.readAsString();
+      final service = await ref.read(backupServiceProvider.future);
+      final count = await service.import(source, mode: mode);
+      await ref.read(repositoryProvider).rescheduleAll();
+      if (!mounted) return;
+      _toast('Imported $count reminder${count == 1 ? '' : 's'}.');
+    } on BackupFormatException catch (e) {
+      if (mounted) _toast(e.message);
+    } catch (_) {
+      if (mounted) _toast('Could not read that file.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<ImportMode?> _askImportMode(int existing) => showDialog<ImportMode>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Import backup'),
+          content: Text(
+            'You already have $existing reminder${existing == 1 ? '' : 's'}. '
+            'Keep them and add the backup alongside, or replace everything '
+            'with what is in the file?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ImportMode.add),
+              child: const Text('Add'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ImportMode.replace),
+              child: const Text(
+                'Replace',
+                style: TextStyle(color: AppColors.danger),
+              ),
+            ),
+          ],
+        ),
+      );
+
   String get _permissionSubtitle {
     final status = _status;
     if (status == null) return 'Checking…';
@@ -98,6 +187,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       onPressed: _busy ? null : _request,
                       child: const Text('Grant'),
                     ),
+        ),
+        const SizedBox(height: 26),
+        const _SectionLabel('Backup'),
+        _SettingRow(
+          icon: Symbols.download,
+          title: 'Export',
+          subtitle: 'Save your reminders to a file',
+          trailing: TextButton(
+            onPressed: _busy ? null : _export,
+            child: const Text('Export'),
+          ),
+        ),
+        _SettingRow(
+          icon: Symbols.upload,
+          title: 'Import',
+          subtitle: 'Bring reminders in from a backup file',
+          trailing: TextButton(
+            onPressed: _busy ? null : _import,
+            child: const Text('Import'),
+          ),
         ),
         const SizedBox(height: 26),
         const _SectionLabel('About'),

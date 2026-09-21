@@ -435,6 +435,9 @@ class _ImageCard extends StatelessWidget {
                 color: progress.allDone
                     ? AppColors.success
                     : AppColors.outline,
+                width: progress.allDone
+                    ? SegmentedProgressBorder.strokeWidth
+                    : 1,
               ),
             ),
       clipBehavior: Clip.antiAlias,
