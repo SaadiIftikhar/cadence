@@ -313,8 +313,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2.5),
                   )
-                : const Icon(Symbols.save),
-            tooltip: 'Save',
+                : const Icon(Symbols.save, semanticLabel: 'Save'),
             onPressed: _saving ? null : _save,
           ),
           const SizedBox(width: 8),
@@ -340,8 +339,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 6),
                 child: IconButton(
-                  icon: Icon(IconCatalog.resolve(_iconKey), size: 28),
-                  tooltip: 'Choose icon',
+                  icon: Icon(
+                    IconCatalog.resolve(_iconKey),
+                    size: 28,
+                    semanticLabel: 'Choose icon',
+                  ),
                   onPressed: _pickIcon,
                 ),
               ),

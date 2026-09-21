@@ -65,14 +65,12 @@ class _EditStepScreenState extends State<EditStepScreen> {
         actions: [
           if (widget.allowDelete)
             IconButton(
-              icon: const Icon(Symbols.delete),
-              tooltip: 'Delete step',
+              icon: const Icon(Symbols.delete, semanticLabel: 'Delete step'),
               onPressed: () =>
                   Navigator.pop(context, const StepEditResult.delete()),
             ),
           IconButton(
-            icon: const Icon(Symbols.save),
-            tooltip: 'Save step',
+            icon: const Icon(Symbols.save, semanticLabel: 'Save step'),
             onPressed: _save,
           ),
           const SizedBox(width: 8),

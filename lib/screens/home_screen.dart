@@ -76,14 +76,13 @@ class _HomeShellState extends State<HomeShell> {
           ? FloatingActionButton(
               key: _fabKey,
               onPressed: _showAddMenu,
-              tooltip: 'Add',
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Symbols.add, size: 30),
+              child: const Icon(Symbols.add, size: 30, semanticLabel: 'Add'),
             )
           : null,
       bottomNavigationBar: _BottomBar(index: _index, onSelected: _onDestination),

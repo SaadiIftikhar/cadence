@@ -112,7 +112,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                       children: [
                         _CircleControl(
                           icon: _running ? Symbols.pause : Symbols.play_arrow,
-                          tooltip: _running ? 'Pause' : 'Start',
+                          label: _running ? 'Pause' : 'Start',
                           onTap: _running ? _pause : _start,
                         ),
                         const SizedBox(width: 24),
@@ -120,7 +120,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                         const SizedBox(width: 24),
                         _CircleControl(
                           icon: Symbols.restart_alt,
-                          tooltip: 'Back to full time',
+                          label: 'Back to full time',
                           onTap: _restartTimer,
                         ),
                       ],
@@ -159,27 +159,29 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
 class _CircleControl extends StatelessWidget {
   const _CircleControl({
     required this.icon,
-    required this.tooltip,
+    required this.label,
     required this.onTap,
   });
 
   final IconData icon;
-  final String tooltip;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Icon(icon, size: 40, color: AppColors.onSurface),
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Icon(
+            icon,
+            size: 40,
+            color: AppColors.onSurface,
+            semanticLabel: label,
           ),
         ),
       ),

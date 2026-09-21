@@ -112,20 +112,17 @@ class _IconCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: name.replaceAll('_', ' '),
-      waitDuration: const Duration(milliseconds: 600),
-      child: Material(
-        color: selected ? AppColors.primary : Colors.transparent,
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Icon(
-            IconCatalog.resolve(name),
-            size: 28,
-            color: selected ? AppColors.onPrimary : AppColors.onSurface,
-          ),
+    return Material(
+      color: selected ? AppColors.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Icon(
+          IconCatalog.resolve(name),
+          size: 28,
+          color: selected ? AppColors.onPrimary : AppColors.onSurface,
+          semanticLabel: name.replaceAll('_', ' '),
         ),
       ),
     );
