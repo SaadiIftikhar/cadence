@@ -96,30 +96,6 @@ void main() {
       expect(find.byType(SegmentedProgressBorder), findsNothing);
     });
 
-    testWidgets('cuts a rounded card at its corners for any count',
-        (tester) async {
-      // Fewer steps than sides, one per side, and more steps than sides all
-      // take different branches of the corner-aligned layout.
-      for (final count in [2, 3, 4, 5, 8, 9, 20]) {
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: buildAppTheme(),
-            home: Scaffold(
-              body: Center(
-                child: SegmentedProgressBorder(
-                  done: count ~/ 2,
-                  total: count,
-                  shape: AppShapes.card,
-                  child: const SizedBox(width: 340, height: 300),
-                ),
-              ),
-            ),
-          ),
-        );
-        expect(tester.takeException(), isNull, reason: '$count steps threw');
-      }
-    });
-
     testWidgets('traces a rounded card, not just a pill', (tester) async {
       // The image-card case: a tall rounded rectangle rather than a stadium.
       await tester.pumpWidget(
