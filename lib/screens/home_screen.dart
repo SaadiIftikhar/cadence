@@ -203,8 +203,9 @@ class ReminderListView extends ConsumerWidget {
               textAlign: TextAlign.center),
         ),
       ),
-      data: (items) {
-        if (items.isEmpty) return const _EmptyState();
+      data: (all) {
+        if (all.isEmpty) return const _EmptyState();
+        final items = orderedForHome(all, progress);
         return ListView.separated(
           // Bottom padding clears the floating add button.
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
@@ -346,6 +347,10 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
               onLongPress: _showActions,
               progress:
                   p.isRoutine ? (done: p.done, total: p.total) : null,
+              // A single step has no segments, so the whole outline carries
+              // the completed state instead.
+              outlineColor:
+                  !p.isRoutine && p.allDone ? AppColors.success : null,
               trailing: p.isRoutine ? _ProgressBadge(progress: p) : null,
             )
           : _ImageCard(
@@ -435,7 +440,13 @@ class _ImageCard extends StatelessWidget {
       color: Colors.transparent,
       shape: progress.isRoutine
           ? shape
-          : shape.copyWith(side: const BorderSide(color: AppColors.outline)),
+          : shape.copyWith(
+              side: BorderSide(
+                color: progress.allDone
+                    ? AppColors.success
+                    : AppColors.outline,
+              ),
+            ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

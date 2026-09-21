@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:step_reminder/data/database.dart';
+import 'package:step_reminder/data/providers.dart';
 import 'package:step_reminder/screens/run_step_screen.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
@@ -215,6 +216,67 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result, 'delete');
+    });
+  });
+
+  group('orderedForHome', () {
+    Reminder at(int id, int hour, int minute) => Reminder(
+          id: id,
+          title: 'reminder $id',
+          iconKey: 'alarm',
+          hour: hour,
+          minute: minute,
+          daysMask: 0,
+          notificationsEnabled: true,
+          alarmEnabled: false,
+          multiStep: false,
+          enabled: true,
+          createdAt: DateTime(2026),
+        );
+
+    Iterable<int> idsOf(List<Reminder> list, Map<int, StepProgress> progress) =>
+        orderedForHome(list, progress).map((r) => r.id);
+
+    test('sorts by time of day', () {
+      final list = [at(1, 9, 0), at(2, 7, 30), at(3, 8, 15)];
+      expect(idsOf(list, const {}), [2, 3, 1]);
+    });
+
+    test('a minute still separates two reminders in the same hour', () {
+      final list = [at(1, 8, 45), at(2, 8, 5)];
+      expect(idsOf(list, const {}), [2, 1]);
+    });
+
+    test('finished ones drop below everything unfinished', () {
+      final list = [at(1, 7, 0), at(2, 8, 0), at(3, 9, 0)];
+      const progress = {
+        1: StepProgress(total: 2, done: 2), // finished, earliest time
+        2: StepProgress(total: 2, done: 1),
+        3: StepProgress(total: 1, done: 0),
+      };
+      expect(idsOf(list, progress), [2, 3, 1]);
+    });
+
+    test('finished ones keep time order among themselves', () {
+      final list = [at(1, 9, 0), at(2, 7, 0)];
+      const progress = {
+        1: StepProgress(total: 1, done: 1),
+        2: StepProgress(total: 1, done: 1),
+      };
+      expect(idsOf(list, progress), [2, 1]);
+    });
+
+    test('an identical time falls back to id so the order never wobbles', () {
+      final list = [at(3, 8, 0), at(1, 8, 0), at(2, 8, 0)];
+      expect(idsOf(list, const {}), [1, 2, 3]);
+    });
+
+    test('a reminder with no steps counts as unfinished', () {
+      final list = [at(1, 9, 0), at(2, 7, 0)];
+      const progress = {
+        2: StepProgress(total: 0, done: 0),
+      };
+      expect(idsOf(list, progress), [2, 1]);
     });
   });
 

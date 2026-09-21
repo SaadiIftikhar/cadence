@@ -13,6 +13,7 @@ class ValuePill extends StatelessWidget {
     required this.value,
     required this.onTap,
     this.placeholder = false,
+    this.invalid = false,
   });
 
   final IconData icon;
@@ -21,13 +22,22 @@ class ValuePill extends StatelessWidget {
 
   /// Dims the value when nothing has been chosen yet.
   final bool placeholder;
+
+  /// Reddens the outline when a save was attempted without this filled in.
+  final bool invalid;
+
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      shape: const StadiumBorder(side: BorderSide(color: AppColors.outline)),
+      shape: StadiumBorder(
+        side: BorderSide(
+          color: invalid ? AppColors.danger : AppColors.outline,
+          width: invalid ? 2 : 1,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

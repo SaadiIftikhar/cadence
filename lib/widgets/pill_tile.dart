@@ -19,7 +19,12 @@ class PillTile extends StatelessWidget {
     this.dimmed = false,
     this.subtitle,
     this.progress,
+    this.outlineColor,
   });
+
+  /// Overrides the outline colour. A single step has no segments to fill, so
+  /// the whole outline turns green when it is done.
+  final Color? outlineColor;
 
   final String label;
   final String? subtitle;
@@ -48,7 +53,9 @@ class PillTile extends StatelessWidget {
       // The painter supplies the outline when segmented, so drop the plain one.
       shape: (filled || showSegments)
           ? AppShapes.pill
-          : const StadiumBorder(side: BorderSide(color: AppColors.outline)),
+          : StadiumBorder(
+              side: BorderSide(color: outlineColor ?? AppColors.outline),
+            ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

@@ -60,6 +60,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   bool _loading = true;
   bool _saving = false;
 
+  /// Set when a save was attempted with the field empty; reddens its outline
+  /// until it is filled in.
+  bool _titleInvalid = false;
+  bool _timeInvalid = false;
+
   bool get _isNew => widget.reminderId == null;
 
   @override
@@ -116,7 +121,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       context: context,
       initialTime: _time ?? const TimeOfDay(hour: 8, minute: 0),
     );
-    if (picked != null) setState(() => _time = picked);
+    if (picked != null) {
+      setState(() {
+        _time = picked;
+        _timeInvalid = false;
+      });
+    }
   }
 
   Future<void> _pickDays() async {
@@ -205,16 +215,22 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
   Future<void> _save() async {
     final title = _title.text.trim();
-    if (title.isEmpty) {
-      _toast(_routine ? 'Give the routine a name.' : 'Give the step a title.');
+    final missingTitle = title.isEmpty;
+    final missingTime = _time == null;
+
+    // Both are marked at once, so a save never fixes one field only to
+    // complain about the next.
+    if (missingTitle || missingTime) {
+      setState(() {
+        _titleInvalid = missingTitle;
+        _timeInvalid = missingTime;
+      });
       return;
     }
+
+    // No single field to redden for this one.
     if (_routine && _steps.isEmpty) {
       _toast('Add at least one step.');
-      return;
-    }
-    if (_time == null) {
-      _toast('Pick a time first.');
       return;
     }
 
@@ -265,6 +281,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Outline only — the label keeps its normal colour so nothing shouts.
+  static const _invalidBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(40)),
+    borderSide: BorderSide(color: AppColors.danger, width: 2),
+  );
+
   String get _screenTitle {
     if (_routine) return _isNew ? 'New routine' : 'Edit routine';
     return _isNew ? 'New step' : 'Edit step';
@@ -305,9 +327,16 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             controller: _title,
             style: const TextStyle(fontSize: 19),
             textCapitalization: TextCapitalization.sentences,
+            onChanged: (v) {
+              if (_titleInvalid && v.trim().isNotEmpty) {
+                setState(() => _titleInvalid = false);
+              }
+            },
             decoration: InputDecoration(
               labelText: _routine ? 'Routine name' : 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
+              enabledBorder: _titleInvalid ? _invalidBorder : null,
+              focusedBorder: _titleInvalid ? _invalidBorder : null,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 6),
                 child: IconButton(
@@ -335,6 +364,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                 ? 'Set time'
                 : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
             placeholder: _time == null,
+            invalid: _timeInvalid,
             onTap: _pickTime,
           ),
           const SizedBox(height: 12),

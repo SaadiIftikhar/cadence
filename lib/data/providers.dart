@@ -26,6 +26,27 @@ final repositoryProvider = Provider<ReminderRepository>(
   (ref) => ReminderRepository(ref.watch(databaseProvider)),
 );
 
+/// Home order: still to do first, earliest time of day first within that, and
+/// anything finished pushed to the bottom keeping the same time order.
+List<Reminder> orderedForHome(
+  List<Reminder> reminders,
+  Map<int, StepProgress> progress,
+) {
+  int minuteOfDay(Reminder r) => r.hour * 60 + r.minute;
+  int finished(Reminder r) => (progress[r.id]?.allDone ?? false) ? 1 : 0;
+
+  return [...reminders]..sort((a, b) {
+      final byDone = finished(a) - finished(b);
+      if (byDone != 0) return byDone;
+
+      final byTime = minuteOfDay(a).compareTo(minuteOfDay(b));
+      if (byTime != 0) return byTime;
+
+      // Dart's sort is not stable, so break remaining ties deterministically.
+      return a.id.compareTo(b.id);
+    });
+}
+
 /// An unsaved step. The edit screen builds these up before the reminder itself
 /// has an id, so they cannot be drift rows yet.
 class StepDraft {
