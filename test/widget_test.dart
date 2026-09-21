@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/data/providers.dart';
 import 'package:step_reminder/screens/run_step_screen.dart';
@@ -220,7 +221,7 @@ void main() {
   });
 
   group('Run step screen', () {
-    testWidgets('Reset and Done are the same width', (tester) async {
+    Future<void> pumpStep(WidgetTester tester, {required bool completed}) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -233,18 +234,45 @@ void main() {
                 iconKey: null,
                 timerSeconds: 300,
                 position: 0,
-                completed: false,
+                completed: completed,
               ),
             ),
           ),
         ),
       );
       await tester.pump();
+    }
+
+    OutlinedButton resetButton(WidgetTester tester) =>
+        tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Reset'),
+        );
+
+    Icon tickIcon(WidgetTester tester) =>
+        tester.widget<Icon>(find.byIcon(Symbols.done_all));
+
+    testWidgets('Reset and Done are the same width', (tester) async {
+      await pumpStep(tester, completed: false);
 
       final reset =
           tester.getSize(find.widgetWithText(OutlinedButton, 'Reset'));
       final done = tester.getSize(find.widgetWithText(OutlinedButton, 'Done'));
       expect(reset.width, done.width);
+    });
+
+    testWidgets('an unfinished step cannot be reset and has a plain tick',
+        (tester) async {
+      await pumpStep(tester, completed: false);
+
+      expect(resetButton(tester).onPressed, isNull);
+      expect(tickIcon(tester).color, isNull);
+    });
+
+    testWidgets('reopening a finished step shows it finished', (tester) async {
+      await pumpStep(tester, completed: true);
+
+      expect(resetButton(tester).onPressed, isNotNull);
+      expect(tickIcon(tester).color, AppColors.success);
     });
   });
 

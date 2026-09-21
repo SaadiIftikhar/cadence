@@ -28,6 +28,10 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   late Duration _remaining = _total;
   bool _running = false;
 
+  /// Reopening a finished step should still look finished, so the tick starts
+  /// green and Reset starts available.
+  late bool _completed = widget.step.completed;
+
   Duration get _total => Duration(seconds: widget.step.timerSeconds ?? 0);
   bool get _hasTimer => _total > Duration.zero;
   bool get _finished => _remaining <= Duration.zero;
@@ -74,10 +78,12 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
 
   Future<void> _reset() async {
     _restartTimer();
+    setState(() => _completed = false);
     await ref.read(repositoryProvider).markStep(widget.step.id, false);
   }
 
   Future<void> _done() async {
+    setState(() => _completed = true);
     await ref.read(repositoryProvider).markStep(widget.step.id, true);
     if (mounted) Navigator.pop(context, true);
   }
@@ -133,7 +139,10 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _reset,
+                      // Undoes completion, so there is nothing to undo until
+                      // the step has been marked done. Putting the timer back
+                      // to full is the control next to the timer itself.
+                      onPressed: _completed ? _reset : null,
                       icon: const Icon(Symbols.refresh, size: 24),
                       label: const Text('Reset'),
                     ),
@@ -142,7 +151,11 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: _done,
-                      icon: const Icon(Symbols.done_all, size: 24),
+                      icon: Icon(
+                        Symbols.done_all,
+                        size: 24,
+                        color: _completed ? AppColors.success : null,
+                      ),
                       label: const Text('Done'),
                     ),
                   ),
