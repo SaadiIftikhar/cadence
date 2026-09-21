@@ -39,6 +39,21 @@ void main() {
     });
   });
 
+  group('describeDays', () {
+    test('names the common presets', () {
+      expect(describeDays(0), 'Once');
+      expect(describeDays(0x7F), 'Every day');
+      expect(describeDays(0x1F), 'Weekdays');
+      expect(describeDays(0x60), 'Weekends');
+    });
+
+    test('lists arbitrary selections in weekday order', () {
+      // Monday, Wednesday, Friday.
+      expect(describeDays(1 | 1 << 2 | 1 << 4), 'Mon, Wed, Fri');
+      expect(describeDays(1 << 6), 'Sun');
+    });
+  });
+
   group('DaySelector', () {
     testWidgets('toggles the bit for the tapped day', (tester) async {
       var mask = 0;

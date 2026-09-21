@@ -69,6 +69,22 @@ class AppDatabase extends _$AppDatabase {
         ..orderBy([(s) => OrderingTerm(expression: s.position)]))
       .get();
 
+  /// Step count per reminder id, so the home list can tell a single-step
+  /// reminder from a multi-step one without loading every step.
+  Stream<Map<int, int>> watchStepCounts() {
+    final total = reminderSteps.id.count();
+    final query = selectOnly(reminderSteps)
+      ..addColumns([reminderSteps.reminderId, total])
+      ..groupBy([reminderSteps.reminderId]);
+
+    return query.watch().map(
+          (rows) => {
+            for (final row in rows)
+              row.read(reminderSteps.reminderId)!: row.read(total)!,
+          },
+        );
+  }
+
   Future<int> upsertReminder(RemindersCompanion entry) async {
     if (entry.id.present) {
       await (update(reminders)..where((r) => r.id.equals(entry.id.value)))
@@ -92,6 +108,62 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteStep(int id) =>
       (delete(reminderSteps)..where((s) => s.id.equals(id))).go();
+
+  /// Inserts one single-step and one multi-step example the first time the app
+  /// runs, so the home list has something to show. Deleting them is permanent —
+  /// they are only seeded into an empty database.
+  Future<void> seedSamplesIfEmpty() async {
+    final existing = await select(reminders).get();
+    if (existing.isNotEmpty) return;
+
+    await transaction(() async {
+      final vitamins = await into(reminders).insert(
+        RemindersCompanion.insert(
+          title: const Value('Take vitamins'),
+          iconKey: const Value('medication'),
+          hour: const Value(8),
+          minute: const Value(30),
+          daysMask: const Value(0x1F), // weekdays
+        ),
+      );
+      await into(reminderSteps).insert(
+        ReminderStepsCompanion.insert(
+          reminderId: vitamins,
+          title: const Value('Vitamin D with breakfast'),
+          iconKey: const Value('medication'),
+        ),
+      );
+
+      final routine = await into(reminders).insert(
+        RemindersCompanion.insert(
+          title: const Value('Morning routine'),
+          iconKey: const Value('wb_sunny'),
+          hour: const Value(7),
+          minute: const Value(0),
+          daysMask: const Value(0x7F), // every day
+          multiStep: const Value(true),
+        ),
+      );
+      const steps = [
+        ('Drink a glass of water', 'water_drop', null),
+        ('Stretch', 'self_improvement', 300),
+        ('Shower', 'shower', 600),
+        ('Make coffee', 'local_cafe', 180),
+      ];
+      for (var i = 0; i < steps.length; i++) {
+        final (title, icon, seconds) = steps[i];
+        await into(reminderSteps).insert(
+          ReminderStepsCompanion.insert(
+            reminderId: routine,
+            title: Value(title),
+            iconKey: Value(icon),
+            timerSeconds: Value(seconds),
+            position: Value(i),
+          ),
+        );
+      }
+    });
+  }
 
   Future<void> replaceSteps(
       int reminderId, List<ReminderStepsCompanion> entries) async {

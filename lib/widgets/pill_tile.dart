@@ -16,9 +16,11 @@ class PillTile extends StatelessWidget {
     this.onLongPress,
     this.trailing,
     this.dimmed = false,
+    this.subtitle,
   });
 
   final String label;
+  final String? subtitle;
   final String? iconKey;
   final bool filled;
   final bool dimmed;
@@ -48,15 +50,34 @@ class PillTile extends StatelessWidget {
               Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground),
               const SizedBox(width: 22),
               Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 19,
-                    color: foreground,
-                    height: 1.1,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 19,
+                        color: foreground,
+                        height: 1.1,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.onSurfaceVariant,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               ?trailing,

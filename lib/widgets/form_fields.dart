@@ -1,93 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../theme/app_theme.dart';
 
-/// `HH : MM` boxes with the stacked AM/PM selector from the New/Edit mockups.
-class TimeField extends StatelessWidget {
-  const TimeField({super.key, required this.time, required this.onChanged});
+/// A stadium row that names a setting and shows its current value.
+/// Used for the time and repeat pickers so both read the same way.
+class ValuePill extends StatelessWidget {
+  const ValuePill({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.placeholder = false,
+  });
 
-  final TimeOfDay? time;
-  final ValueChanged<TimeOfDay> onChanged;
+  final IconData icon;
+  final String label;
+  final String value;
 
-  bool get _isPm => (time?.period ?? DayPeriod.pm) == DayPeriod.pm;
-
-  String get _hourText {
-    final t = time;
-    if (t == null) return 'HH';
-    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    return h.toString().padLeft(2, '0');
-  }
-
-  String get _minuteText =>
-      time == null ? 'MM' : time!.minute.toString().padLeft(2, '0');
-
-  Future<void> _pick(BuildContext context) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: time ?? const TimeOfDay(hour: 8, minute: 0),
-    );
-    if (picked != null) onChanged(picked);
-  }
-
-  void _setPeriod(DayPeriod period) {
-    final t = time ?? const TimeOfDay(hour: 8, minute: 0);
-    if (t.period == period) return;
-    final shifted = period == DayPeriod.pm ? t.hour + 12 : t.hour - 12;
-    onChanged(TimeOfDay(hour: shifted % 24, minute: t.minute));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _TimeBox(text: _hourText, onTap: () => _pick(context)),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10),
-          child: Text(':', style: TextStyle(fontSize: 40, color: AppColors.onSurface)),
-        ),
-        _TimeBox(text: _minuteText, onTap: () => _pick(context)),
-        const SizedBox(width: 12),
-        _PeriodToggle(
-          isPm: _isPm,
-          onChanged: _setPeriod,
-        ),
-      ],
-    );
-  }
-}
-
-class _TimeBox extends StatelessWidget {
-  const _TimeBox({required this.text, required this.onTap});
-
-  final String text;
+  /// Dims the value when nothing has been chosen yet.
+  final bool placeholder;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppColors.outline),
-      ),
+      shape: const StadiumBorder(side: BorderSide(color: AppColors.outline)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          width: 98,
-          height: 74,
-          child: Center(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 44,
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.w400,
-                height: 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Row(
+            children: [
+              Icon(icon, size: 26, color: AppColors.onSurface),
+              const SizedBox(width: 18),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 19, color: AppColors.onSurface)),
+              const Spacer(),
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: placeholder
+                        ? AppColors.onSurfaceVariant
+                        : AppColors.primary,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 6),
+              const Icon(Symbols.chevron_right,
+                  size: 24, color: AppColors.onSurfaceVariant),
+            ],
           ),
         ),
       ),
@@ -95,72 +67,62 @@ class _TimeBox extends StatelessWidget {
   }
 }
 
-class _PeriodToggle extends StatelessWidget {
-  const _PeriodToggle({required this.isPm, required this.onChanged});
+/// Human-readable summary of a weekday [mask]. Bit 0 is Monday.
+String describeDays(int mask) {
+  if (mask == 0) return 'Once';
+  if (mask == 0x7F) return 'Every day';
+  if (mask == 0x1F) return 'Weekdays';
+  if (mask == 0x60) return 'Weekends';
 
-  final bool isPm;
-  final ValueChanged<DayPeriod> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 52,
-      height: 74,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.outline),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          _PeriodHalf(
-            label: 'AM',
-            selected: !isPm,
-            onTap: () => onChanged(DayPeriod.am),
-          ),
-          _PeriodHalf(
-            label: 'PM',
-            selected: isPm,
-            onTap: () => onChanged(DayPeriod.pm),
-          ),
-        ],
-      ),
-    );
-  }
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return [
+    for (var i = 0; i < 7; i++)
+      if (mask & (1 << i) != 0) names[i],
+  ].join(', ');
 }
 
-class _PeriodHalf extends StatelessWidget {
-  const _PeriodHalf({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: selected ? AppColors.accentPink : Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: selected ? AppColors.onAccentPink : AppColors.onSurface,
-              ),
+/// Opens the weekday chips in a dialog. Returns null if dismissed.
+Future<int?> showDayPickerDialog(BuildContext context, int mask) {
+  return showDialog<int>(
+    context: context,
+    builder: (ctx) {
+      var local = mask;
+      return StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Repeat on'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DaySelector(
+                  mask: local,
+                  onChanged: (m) => setLocal(() => local = m),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  describeDays(local),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.onSurfaceVariant),
+                ),
+              ],
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, local),
+              child: const Text('Done'),
+            ),
+          ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
 
 /// M T W T F S S selector. [mask] bit 0 is Monday through bit 6 Sunday.
@@ -223,7 +185,7 @@ class _DayChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          height: 56,
+          height: 52,
           child: Center(
             child: Text(
               label,

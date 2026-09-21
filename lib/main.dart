@@ -36,9 +36,10 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
   void initState() {
     super.initState();
 
-    // Android drops scheduled alarms on reboot and reinstall, so re-arm them.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(repositoryProvider).rescheduleAll();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(databaseProvider).seedSamplesIfEmpty();
+      // Android drops scheduled alarms on reboot and reinstall, so re-arm them.
+      await ref.read(repositoryProvider).rescheduleAll();
     });
 
     NotificationService.instance.launchReminderId

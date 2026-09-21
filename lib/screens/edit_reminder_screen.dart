@@ -86,6 +86,19 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     });
   }
 
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _time ?? const TimeOfDay(hour: 8, minute: 0),
+    );
+    if (picked != null) setState(() => _time = picked);
+  }
+
+  Future<void> _pickDays() async {
+    final picked = await showDayPickerDialog(context, _daysMask);
+    if (picked != null) setState(() => _daysMask = picked);
+  }
+
   Future<void> _pickReminderIcon() async {
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
@@ -250,24 +263,24 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             onChanged: (v) => setState(() => _multiStep = v),
           ),
           const SizedBox(height: 18),
-          TimeField(
-            time: _time,
-            onChanged: (t) => setState(() => _time = t),
+          ValuePill(
+            icon: Symbols.schedule,
+            label: 'Time',
+            value: _time == null
+                ? 'Set time'
+                : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
+            placeholder: _time == null,
+            onTap: _pickTime,
           ),
-          const SizedBox(height: 22),
-          DaySelector(
-            mask: _daysMask,
-            onChanged: (m) => setState(() => _daysMask = m),
+          const SizedBox(height: 12),
+          ValuePill(
+            icon: Symbols.repeat,
+            label: 'Repeat',
+            value: describeDays(_daysMask),
+            placeholder: _daysMask == 0,
+            onTap: _pickDays,
           ),
-          const SizedBox(height: 10),
-          Text(
-            _daysMask == 0
-                ? 'No days selected — fires once at the next occurrence.'
-                : 'Repeats weekly on the selected days.',
-            style: const TextStyle(
-                fontSize: 13, color: AppColors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           LabeledSwitch(
             label: 'Notifications',
             value: _notifications,

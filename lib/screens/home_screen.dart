@@ -8,6 +8,7 @@ import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
+import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
 import 'calendar_screen.dart';
 import 'edit_reminder_screen.dart';
@@ -164,6 +165,7 @@ class ReminderListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reminders = ref.watch(remindersProvider);
+    final counts = ref.watch(stepCountsProvider).value ?? const <int, int>{};
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -181,7 +183,10 @@ class ReminderListView extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
           itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 16),
-          itemBuilder: (context, i) => _ReminderEntry(reminder: items[i]),
+          itemBuilder: (context, i) => _ReminderEntry(
+            reminder: items[i],
+            stepCount: counts[items[i].id] ?? 0,
+          ),
         );
       },
     );
@@ -220,9 +225,10 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ReminderEntry extends ConsumerStatefulWidget {
-  const _ReminderEntry({required this.reminder});
+  const _ReminderEntry({required this.reminder, required this.stepCount});
 
   final Reminder reminder;
+  final int stepCount;
 
   @override
   ConsumerState<_ReminderEntry> createState() => _ReminderEntryState();
@@ -328,20 +334,29 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
   Widget build(BuildContext context) {
     final r = widget.reminder;
     final title = r.title.trim().isEmpty ? 'Untitled reminder' : r.title.trim();
+    final time = MaterialLocalizations.of(context)
+        .formatTimeOfDay(TimeOfDay(hour: r.hour, minute: r.minute));
+    final subtitle = '$time · ${describeDays(r.daysMask)}';
+    final multiStep = widget.stepCount > 1;
 
     return KeyedSubtree(
       key: _anchor,
       child: r.imagePath == null
           ? PillTile(
               label: title,
+              subtitle: subtitle,
               iconKey: r.iconKey,
               dimmed: !r.enabled,
               onTap: _open,
               onLongPress: _showActions,
+              trailing:
+                  multiStep ? _StepCountBadge(count: widget.stepCount) : null,
             )
           : _ImageCard(
               reminder: r,
               title: title,
+              subtitle: subtitle,
+              stepCount: widget.stepCount,
               onTap: _open,
               onLongPress: _showActions,
             ),
@@ -375,16 +390,54 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+/// Marks a reminder that runs as a checklist rather than a single action.
+class _StepCountBadge extends StatelessWidget {
+  const _StepCountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Symbols.format_list_numbered,
+              size: 16, color: AppColors.onPrimary),
+          const SizedBox(width: 5),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.onPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ImageCard extends StatelessWidget {
   const _ImageCard({
     required this.reminder,
     required this.title,
+    required this.subtitle,
+    required this.stepCount,
     required this.onTap,
     required this.onLongPress,
   });
 
   final Reminder reminder;
   final String title;
+  final String subtitle;
+  final int stepCount;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -435,7 +488,17 @@ class _ImageCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (stepCount > 1) ...[
+                    const SizedBox(width: 12),
+                    _StepCountBadge(count: stepCount),
+                  ],
                 ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                    fontSize: 13, color: AppColors.onSurfaceVariant),
               ),
               const SizedBox(height: 8),
             ],
