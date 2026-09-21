@@ -30,7 +30,7 @@ class ReminderBackup {
     required this.multiStep,
     required this.enabled,
     required this.steps,
-    this.imageBase64,
+    this.imageName,
   });
 
   final String title;
@@ -43,9 +43,10 @@ class ReminderBackup {
   final bool multiStep;
   final bool enabled;
 
-  /// The picture itself travels inside the file, so a backup is one
-  /// self-contained thing to move between phones.
-  final String? imageBase64;
+  /// Name of the picture's file inside the backup zip, alongside this
+  /// manifest, so a backup stays one self-contained thing to move between
+  /// phones without bloating the manifest with encoded bytes.
+  final String? imageName;
 
   final List<StepBackup> steps;
 }
@@ -58,7 +59,7 @@ class ReminderBackup {
 class Backup {
   const Backup._();
 
-  static const formatVersion = 1;
+  static const formatVersion = 2;
   static const _appTag = 'step_reminder';
 
   static String encode(List<ReminderBackup> reminders) {
@@ -78,7 +79,7 @@ class Backup {
             'alarm': r.alarmEnabled,
             'multiStep': r.multiStep,
             'enabled': r.enabled,
-            if (r.imageBase64 != null) 'image': r.imageBase64,
+            if (r.imageName != null) 'image': r.imageName,
             'steps': [
               for (final s in r.steps)
                 {
@@ -148,7 +149,7 @@ class Backup {
       alarmEnabled: _bool(entry['alarm'], false),
       multiStep: _bool(entry['multiStep'], false),
       enabled: _bool(entry['enabled'], true),
-      imageBase64: entry['image'] is String ? entry['image'] as String : null,
+      imageName: entry['image'] is String ? entry['image'] as String : null,
       steps: [for (final s in steps) _step(s)],
     );
   }

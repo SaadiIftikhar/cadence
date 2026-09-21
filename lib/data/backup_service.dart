@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
@@ -17,6 +18,10 @@ enum ImportMode {
 }
 
 /// Moves reminders in and out of a backup file.
+///
+/// A backup is a zip holding one manifest and the pictures it refers to.
+/// Pictures stay real files rather than text inside the manifest, which keeps
+/// the archive close to the size of the images themselves.
 class BackupService {
   BackupService(this._db, {required this.imageDirectory});
 
@@ -26,18 +31,30 @@ class BackupService {
   /// temporary folder instead of app storage.
   final Directory imageDirectory;
 
-  Future<String> export() async {
+  static const manifestName = 'backup.json';
+  static const imageFolder = 'images';
+
+  Future<Uint8List> export() async {
     final reminders = await _db.allReminders();
     final items = <ReminderBackup>[];
+    final archive = Archive();
 
-    for (final r in reminders) {
+    for (var i = 0; i < reminders.length; i++) {
+      final r = reminders[i];
       final steps = await _db.stepsFor(r.id);
 
-      String? image;
+      String? imageName;
       final path = r.imagePath;
       if (path != null) {
         final file = File(path);
-        if (file.existsSync()) image = base64Encode(await file.readAsBytes());
+        if (file.existsSync()) {
+          final bytes = await file.readAsBytes();
+          final extension = p.extension(path);
+          imageName = 'reminder_$i${extension.isEmpty ? '.jpg' : extension}';
+          archive.addFile(
+            ArchiveFile('$imageFolder/$imageName', bytes.length, bytes),
+          );
+        }
       }
 
       items.add(
@@ -51,7 +68,7 @@ class BackupService {
           alarmEnabled: r.alarmEnabled,
           multiStep: r.multiStep,
           enabled: r.enabled,
-          imageBase64: image,
+          imageName: imageName,
           steps: [
             // Completion is left behind here: a backup describes the
             // reminder, not how far through today's run you happen to be.
@@ -66,37 +83,41 @@ class BackupService {
       );
     }
 
-    return Backup.encode(items);
+    final manifest = utf8.encode(Backup.encode(items));
+    archive.addFile(ArchiveFile(manifestName, manifest.length, manifest));
+
+    return Uint8List.fromList(ZipEncoder().encode(archive));
   }
 
-  /// Returns how many reminders were brought in.
-  /// Throws [BackupFormatException] if the file cannot be read.
-  Future<int> import(String source, {required ImportMode mode}) async {
+  /// Returns how many reminders were brought in. Accepts a backup zip, or a
+  /// bare manifest for anyone who unzipped one.
+  ///
+  /// Throws [BackupFormatException] if the file cannot be read, having
+  /// changed nothing.
+  Future<int> import(Uint8List bytes, {required ImportMode mode}) async {
+    final (source, images) = _unpack(bytes);
+
+    // Parsed before anything is deleted, so a bad file cannot cost the user
+    // what they already had.
     final items = Backup.decode(source);
 
     if (mode == ImportMode.replace) {
       await _db.deleteAllReminders();
     }
 
-    for (final item in items) {
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+
       String? imagePath;
-      final encoded = item.imageBase64;
-      if (encoded != null) {
-        try {
-          final bytes = base64Decode(encoded);
-          final file = File(
-            p.join(
-              imageDirectory.path,
-              'imported_${DateTime.now().microsecondsSinceEpoch}_'
-                  '${items.indexOf(item)}.jpg',
-            ),
-          );
-          await file.writeAsBytes(bytes);
-          imagePath = file.path;
-        } on FormatException {
-          // A damaged picture should not cost the user the reminder.
-          imagePath = null;
-        }
+      final name = item.imageName;
+      final data = name == null ? null : images[name];
+      if (data != null) {
+        final file = File(
+          p.join(imageDirectory.path, 'imported_${stamp}_${i}_$name'),
+        );
+        await file.writeAsBytes(data);
+        imagePath = file.path;
       }
 
       final id = await _db.upsertReminder(
@@ -130,4 +151,41 @@ class BackupService {
 
     return items.length;
   }
+
+  (String manifest, Map<String, Uint8List> images) _unpack(Uint8List bytes) {
+    if (!_looksLikeZip(bytes)) {
+      try {
+        return (utf8.decode(bytes), const {});
+      } on FormatException {
+        throw const BackupFormatException('That file is not a backup.');
+      }
+    }
+
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (_) {
+      throw const BackupFormatException('That zip could not be opened.');
+    }
+
+    String? manifest;
+    final images = <String, Uint8List>{};
+    for (final entry in archive) {
+      if (!entry.isFile) continue;
+
+      if (entry.name == manifestName) {
+        manifest = utf8.decode(entry.content, allowMalformed: true);
+      } else if (entry.name.startsWith('$imageFolder/')) {
+        images[entry.name.substring(imageFolder.length + 1)] = entry.content;
+      }
+    }
+
+    if (manifest == null) {
+      throw const BackupFormatException('That zip is not a backup.');
+    }
+    return (manifest, images);
+  }
+
+  static bool _looksLikeZip(Uint8List bytes) =>
+      bytes.length >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B;
 }

@@ -50,6 +50,7 @@ dependencies:
   image_cropper: ^12.2.1
   tabler_icons_plus: ^3.47.0
   file_picker: ^13.1.0
+  archive: ^4.3.0
 
 dev_dependencies:
   flutter_test:

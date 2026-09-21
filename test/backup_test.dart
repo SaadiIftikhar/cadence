@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +22,7 @@ void main() {
           alarmEnabled: true,
           multiStep: true,
           enabled: false,
-          imageBase64: image,
+          imageName: image,
           steps: steps ??
               const [
                 StepBackup(title: 'Water', iconKey: 'water_drop'),
@@ -59,10 +60,9 @@ void main() {
           ['step 0', 'step 1', 'step 2', 'step 3', 'step 4', 'step 5']);
     });
 
-    test('a picture travels inside the file', () {
-      final image = base64Encode(List.filled(64, 7));
-      final out = Backup.decode(Backup.encode([sample(image: image)]));
-      expect(out.single.imageBase64, image);
+    test('the manifest names its picture file', () {
+      final out = Backup.decode(Backup.encode([sample(image: 'reminder_0.jpg')]));
+      expect(out.single.imageName, 'reminder_0.jpg');
     });
 
     test('the file never mentions completion', () {
@@ -161,24 +161,24 @@ void main() {
       final steps = await db.stepsFor(id);
       await db.setStepCompleted(steps.first.id, true);
 
-      final json = await service.export();
-      final decoded = Backup.decode(json).single;
+      final zip = await service.export();
+      final decoded = Backup.decode(manifestOf(zip)).single;
 
       expect(decoded.title, 'Morning routine');
       expect(decoded.alarmEnabled, isTrue);
       expect(decoded.daysMask, 0x1F);
       expect(decoded.steps[1].timerSeconds, 300);
-      expect(json.contains('completed'), isFalse);
+      expect(manifestOf(zip).contains('completed'), isFalse);
     });
 
     test('importing into an empty app restores everything', () async {
       await addRoutine(alarm: true);
-      final json = await service.export();
+      final zip = await service.export();
 
       await db.deleteAllReminders();
       expect(await db.allReminders(), isEmpty);
 
-      final count = await service.import(json, mode: ImportMode.add);
+      final count = await service.import(zip, mode: ImportMode.add);
       expect(count, 1);
 
       final restored = (await db.allReminders()).single;
@@ -202,9 +202,9 @@ void main() {
       for (final s in await db.stepsFor(id)) {
         await db.setStepCompleted(s.id, true);
       }
-      final json = await service.export();
+      final zip = await service.export();
 
-      await service.import(json, mode: ImportMode.replace);
+      await service.import(zip, mode: ImportMode.replace);
 
       final restored = (await db.allReminders()).single;
       final steps = await db.stepsFor(restored.id);
@@ -213,9 +213,9 @@ void main() {
 
     test('adding keeps what is already there', () async {
       await addRoutine(title: 'Mine');
-      final json = await service.export();
+      final zip = await service.export();
 
-      await service.import(json, mode: ImportMode.add);
+      await service.import(zip, mode: ImportMode.add);
 
       final all = await db.allReminders();
       expect(all, hasLength(2));
@@ -228,13 +228,13 @@ void main() {
 
     test('replacing leaves only what was in the file', () async {
       await addRoutine(title: 'From the file');
-      final json = await service.export();
+      final zip = await service.export();
 
       await db.deleteAllReminders();
       await addRoutine(title: 'Made later');
       await addRoutine(title: 'Also made later');
 
-      await service.import(json, mode: ImportMode.replace);
+      await service.import(zip, mode: ImportMode.replace);
 
       final all = await db.allReminders();
       expect(all, hasLength(1));
@@ -243,8 +243,8 @@ void main() {
 
     test('replacing leaves no orphaned steps behind', () async {
       await addRoutine(title: 'Doomed');
-      final json = await service.export();
-      await service.import(json, mode: ImportMode.replace);
+      final zip = await service.export();
+      await service.import(zip, mode: ImportMode.replace);
 
       final all = await db.allReminders();
       final live = await db.stepsFor(all.single.id);
@@ -257,10 +257,11 @@ void main() {
       await source.writeAsBytes(List.filled(128, 3));
       await addRoutine(imagePath: source.path);
 
-      final json = await service.export();
-      expect(Backup.decode(json).single.imageBase64, isNotNull);
+      final zip = await service.export();
+      expect(Backup.decode(manifestOf(zip)).single.imageName, isNotNull);
+      expect(namesIn(zip).any((n) => n.startsWith('images/')), isTrue);
 
-      await service.import(json, mode: ImportMode.replace);
+      await service.import(zip, mode: ImportMode.replace);
 
       final restored = (await db.allReminders()).single;
       expect(restored.imagePath, isNotNull);
@@ -271,8 +272,8 @@ void main() {
 
     test('a reminder with no picture stays that way', () async {
       await addRoutine();
-      final json = await service.export();
-      await service.import(json, mode: ImportMode.replace);
+      final zip = await service.export();
+      await service.import(zip, mode: ImportMode.replace);
 
       expect((await db.allReminders()).single.imagePath, isNull);
     });
@@ -281,7 +282,7 @@ void main() {
       await addRoutine(title: 'Untouched');
 
       await expectLater(
-        service.import('not a backup', mode: ImportMode.replace),
+        service.import(bytesOf('not a backup'), mode: ImportMode.replace),
         throwsA(isA<BackupFormatException>()),
       );
 
@@ -289,5 +290,57 @@ void main() {
       expect(all, hasLength(1));
       expect(all.single.title, 'Untouched');
     });
+
+    test('a zip without a manifest is refused', () async {
+      await addRoutine(title: 'Untouched');
+
+      final stray = Archive()
+        ..addFile(ArchiveFile('notes.txt', 5, utf8.encode('hello')));
+      final zip = Uint8List.fromList(ZipEncoder().encode(stray));
+
+      await expectLater(
+        service.import(zip, mode: ImportMode.replace),
+        throwsA(isA<BackupFormatException>()),
+      );
+      expect((await db.allReminders()).single.title, 'Untouched');
+    });
+
+    test('an unzipped manifest still imports', () async {
+      await addRoutine(title: 'From a loose manifest');
+      final manifest = manifestOf(await service.export());
+
+      await db.deleteAllReminders();
+      final count = await service.import(
+        bytesOf(manifest),
+        mode: ImportMode.add,
+      );
+
+      expect(count, 1);
+      expect((await db.allReminders()).single.title, 'From a loose manifest');
+    });
+
+    test('the zip holds the manifest and nothing unexpected', () async {
+      await addRoutine();
+      final names = namesIn(await service.export());
+      expect(names, contains(BackupService.manifestName));
+      expect(
+        names.every(
+          (n) => n == BackupService.manifestName || n.startsWith('images/'),
+        ),
+        isTrue,
+      );
+    });
   });
+}
+
+Uint8List bytesOf(String source) => Uint8List.fromList(utf8.encode(source));
+
+List<String> namesIn(Uint8List zip) =>
+    [for (final f in ZipDecoder().decodeBytes(zip)) f.name];
+
+String manifestOf(Uint8List zip) {
+  final entry = ZipDecoder()
+      .decodeBytes(zip)
+      .firstWhere((f) => f.name == BackupService.manifestName);
+  return utf8.decode(entry.content);
 }

@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,13 +70,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     setState(() => _busy = true);
     try {
       final service = await ref.read(backupServiceProvider.future);
-      final json = await service.export();
+      final zip = await service.export();
       final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final saved = await FilePicker.saveFile(
-        fileName: 'step-reminder-$stamp.json',
-        bytes: Uint8List.fromList(utf8.encode(json)),
-        mimeType: 'application/json',
+        fileName: 'step-reminder-$stamp.zip',
+        bytes: zip,
+        mimeType: 'application/zip',
         dialogTitle: 'Save backup',
       );
       if (!mounted) return;
@@ -95,7 +92,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final picked = await FilePicker.pickFiles(
       dialogTitle: 'Choose a backup',
       type: FileType.custom,
-      allowedExtensions: const ['json'],
+      // A bare manifest works too, for anyone who unzipped one.
+      allowedExtensions: const ['zip', 'json'],
     );
     if (picked.isEmpty || !mounted) return;
 
@@ -107,9 +105,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
     setState(() => _busy = true);
     try {
-      final source = await picked.first.xFile.readAsString();
+      final bytes = await picked.first.xFile.readAsBytes();
       final service = await ref.read(backupServiceProvider.future);
-      final count = await service.import(source, mode: mode);
+      final count = await service.import(bytes, mode: mode);
       await ref.read(repositoryProvider).rescheduleAll();
       if (!mounted) return;
       _toast('Imported $count reminder${count == 1 ? '' : 's'}.');
