@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
+import 'segmented_border.dart';
 
 /// The stadium row used for steps and reminders throughout the designs.
 ///
@@ -17,11 +18,16 @@ class PillTile extends StatelessWidget {
     this.trailing,
     this.dimmed = false,
     this.subtitle,
+    this.progress,
   });
 
   final String label;
   final String? subtitle;
   final String? iconKey;
+
+  /// When set and covering more than one step, the outline is drawn as one
+  /// arc per step with the completed ones filled.
+  final ({int done, int total})? progress;
   final bool filled;
   final bool dimmed;
   final VoidCallback? onTap;
@@ -34,9 +40,13 @@ class PillTile extends StatelessWidget {
         ? AppColors.onSurfaceVariant.withValues(alpha: 0.6)
         : AppColors.onSurface;
 
-    return Material(
+    final segments = progress;
+    final showSegments = segments != null && segments.total > 1;
+
+    final tile = Material(
       color: filled ? AppColors.surfaceFilled : Colors.transparent,
-      shape: filled
+      // The painter supplies the outline when segmented, so drop the plain one.
+      shape: (filled || showSegments)
           ? AppShapes.pill
           : const StadiumBorder(side: BorderSide(color: AppColors.outline)),
       clipBehavior: Clip.antiAlias,
@@ -85,6 +95,13 @@ class PillTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (!showSegments) return tile;
+    return SegmentedProgressBorder(
+      done: segments.done,
+      total: segments.total,
+      child: tile,
     );
   }
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
 import 'package:step_reminder/widgets/cookie_timer.dart';
 import 'package:step_reminder/widgets/form_fields.dart';
+import 'package:step_reminder/widgets/pill_tile.dart';
+import 'package:step_reminder/widgets/segmented_border.dart';
 
 void main() {
   group('formatDuration', () {
@@ -51,6 +54,56 @@ void main() {
       // Monday, Wednesday, Friday.
       expect(describeDays(1 | 1 << 2 | 1 << 4), 'Mon, Wed, Fri');
       expect(describeDays(1 << 6), 'Sun');
+    });
+  });
+
+  group('SegmentedProgressBorder', () {
+    Future<void> pumpPill(WidgetTester tester, int done, int total) {
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Center(
+              child: PillTile(
+                label: 'Morning routine',
+                progress: (done: done, total: total),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('paints partial progress without error', (tester) async {
+      await pumpPill(tester, 2, 4);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SegmentedProgressBorder), findsOneWidget);
+    });
+
+    testWidgets('survives the degenerate counts', (tester) async {
+      for (final (done, total) in [(0, 0), (0, 1), (1, 1), (0, 40), (5, 3)]) {
+        await pumpPill(tester, done, total);
+        expect(tester.takeException(), isNull,
+            reason: 'done=$done total=$total threw');
+      }
+    });
+
+    testWidgets('a single step gets no segmented border', (tester) async {
+      await pumpPill(tester, 0, 1);
+      expect(find.byType(SegmentedProgressBorder), findsNothing);
+    });
+  });
+
+  group('StepProgress', () {
+    test('only counts as a routine past one step', () {
+      expect(const StepProgress(total: 1, done: 0).isRoutine, isFalse);
+      expect(const StepProgress(total: 2, done: 0).isRoutine, isTrue);
+    });
+
+    test('an empty reminder is never all done', () {
+      expect(const StepProgress(total: 0, done: 0).allDone, isFalse);
+      expect(const StepProgress(total: 3, done: 3).allDone, isTrue);
+      expect(const StepProgress(total: 3, done: 2).allDone, isFalse);
     });
   });
 

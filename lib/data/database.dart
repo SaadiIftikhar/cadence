@@ -40,6 +40,16 @@ class ReminderSteps extends Table {
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
 }
 
+class StepProgress {
+  const StepProgress({required this.total, required this.done});
+
+  final int total;
+  final int done;
+
+  bool get isRoutine => total > 1;
+  bool get allDone => total > 0 && done == total;
+}
+
 @DriftDatabase(tables: [Reminders, ReminderSteps])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'step_reminder'));
@@ -86,18 +96,24 @@ class AppDatabase extends _$AppDatabase {
         ..orderBy([(s) => OrderingTerm(expression: s.position)]))
       .get();
 
-  /// Step count per reminder id, so the home list can tell a single-step
-  /// reminder from a multi-step one without loading every step.
-  Stream<Map<int, int>> watchStepCounts() {
+  /// Total and completed step counts per reminder id, so the home list can
+  /// draw progress without loading every step row.
+  Stream<Map<int, StepProgress>> watchStepProgress() {
     final total = reminderSteps.id.count();
+    final done = reminderSteps.id.count(
+      filter: reminderSteps.completed.equals(true),
+    );
     final query = selectOnly(reminderSteps)
-      ..addColumns([reminderSteps.reminderId, total])
+      ..addColumns([reminderSteps.reminderId, total, done])
       ..groupBy([reminderSteps.reminderId]);
 
     return query.watch().map(
           (rows) => {
             for (final row in rows)
-              row.read(reminderSteps.reminderId)!: row.read(total)!,
+              row.read(reminderSteps.reminderId)!: StepProgress(
+                total: row.read(total)!,
+                done: row.read(done)!,
+              ),
           },
         );
   }

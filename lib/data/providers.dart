@@ -18,8 +18,8 @@ final stepsProvider = StreamProvider.family<List<ReminderStep>, int>(
   (ref, reminderId) => ref.watch(databaseProvider).watchSteps(reminderId),
 );
 
-final stepCountsProvider = StreamProvider<Map<int, int>>(
-  (ref) => ref.watch(databaseProvider).watchStepCounts(),
+final stepProgressProvider = StreamProvider<Map<int, StepProgress>>(
+  (ref) => ref.watch(databaseProvider).watchStepProgress(),
 );
 
 final repositoryProvider = Provider<ReminderRepository>(

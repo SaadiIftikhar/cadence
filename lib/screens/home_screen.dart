@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/form_fields.dart';
 import '../widgets/pill_tile.dart';
+import '../widgets/segmented_border.dart';
 import 'calendar_screen.dart';
 import 'edit_reminder_screen.dart';
 import 'run_reminder_screen.dart';
@@ -253,7 +254,8 @@ class ReminderListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reminders = ref.watch(remindersProvider);
-    final counts = ref.watch(stepCountsProvider).value ?? const <int, int>{};
+    final progress =
+        ref.watch(stepProgressProvider).value ?? const <int, StepProgress>{};
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -273,7 +275,8 @@ class ReminderListView extends ConsumerWidget {
           separatorBuilder: (_, _) => const SizedBox(height: 16),
           itemBuilder: (context, i) => _ReminderEntry(
             reminder: items[i],
-            stepCount: counts[items[i].id] ?? 0,
+            progress: progress[items[i].id] ??
+                const StepProgress(total: 0, done: 0),
           ),
         );
       },
@@ -313,10 +316,10 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _ReminderEntry extends ConsumerStatefulWidget {
-  const _ReminderEntry({required this.reminder, required this.stepCount});
+  const _ReminderEntry({required this.reminder, required this.progress});
 
   final Reminder reminder;
-  final int stepCount;
+  final StepProgress progress;
 
   @override
   ConsumerState<_ReminderEntry> createState() => _ReminderEntryState();
@@ -425,7 +428,7 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
     final time = MaterialLocalizations.of(context)
         .formatTimeOfDay(TimeOfDay(hour: r.hour, minute: r.minute));
     final subtitle = '$time · ${describeDays(r.daysMask)}';
-    final multiStep = widget.stepCount > 1;
+    final p = widget.progress;
 
     return KeyedSubtree(
       key: _anchor,
@@ -437,14 +440,15 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
               dimmed: !r.enabled,
               onTap: _open,
               onLongPress: _showActions,
-              trailing:
-                  multiStep ? _StepCountBadge(count: widget.stepCount) : null,
+              progress:
+                  p.isRoutine ? (done: p.done, total: p.total) : null,
+              trailing: p.isRoutine ? _ProgressBadge(progress: p) : null,
             )
           : _ImageCard(
               reminder: r,
               title: title,
               subtitle: subtitle,
-              stepCount: widget.stepCount,
+              progress: p,
               onTap: _open,
               onLongPress: _showActions,
             ),
@@ -478,14 +482,24 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-/// Marks a reminder that runs as a checklist rather than a single action.
-class _StepCountBadge extends StatelessWidget {
-  const _StepCountBadge({required this.count});
+/// Marks a reminder that runs as a checklist, and carries the same progress the
+/// segmented border shows — so the count never depends on reading colour.
+class _ProgressBadge extends StatelessWidget {
+  const _ProgressBadge({required this.progress});
 
-  final int count;
+  final StepProgress progress;
 
   @override
   Widget build(BuildContext context) {
+    if (progress.allDone) {
+      return const Icon(Symbols.check_circle,
+          size: 24, color: AppColors.success);
+    }
+
+    final label = progress.done > 0
+        ? '${progress.done}/${progress.total}'
+        : '${progress.total}';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
@@ -499,7 +513,7 @@ class _StepCountBadge extends StatelessWidget {
               size: 16, color: AppColors.onPrimary),
           const SizedBox(width: 5),
           Text(
-            '$count',
+            label,
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -517,7 +531,7 @@ class _ImageCard extends StatelessWidget {
     required this.reminder,
     required this.title,
     required this.subtitle,
-    required this.stepCount,
+    required this.progress,
     required this.onTap,
     required this.onLongPress,
   });
@@ -525,7 +539,7 @@ class _ImageCard extends StatelessWidget {
   final Reminder reminder;
   final String title;
   final String subtitle;
-  final int stepCount;
+  final StepProgress progress;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -533,7 +547,7 @@ class _ImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final file = File(reminder.imagePath!);
 
-    return Material(
+    final card = Material(
       color: AppColors.surfaceFilled,
       shape: AppShapes.card,
       clipBehavior: Clip.antiAlias,
@@ -576,9 +590,9 @@ class _ImageCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (stepCount > 1) ...[
+                  if (progress.isRoutine) ...[
                     const SizedBox(width: 12),
-                    _StepCountBadge(count: stepCount),
+                    _ProgressBadge(progress: progress),
                   ],
                 ],
               ),
@@ -593,6 +607,14 @@ class _ImageCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (!progress.isRoutine) return card;
+    return SegmentedProgressBorder(
+      done: progress.done,
+      total: progress.total,
+      radius: 28,
+      child: card,
     );
   }
 }
