@@ -34,6 +34,10 @@ class ReminderSteps extends Table {
   /// Null means the step has no timer.
   IntColumn get timerSeconds => integer().nullable()();
   IntColumn get position => integer().withDefault(const Constant(0))();
+
+  /// Survives leaving and re-entering a routine. Only an explicit Reset
+  /// clears it.
+  BoolColumn get completed => boolean().withDefault(const Constant(false))();
 }
 
 @DriftDatabase(tables: [Reminders, ReminderSteps])
@@ -43,14 +47,27 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(reminderSteps, reminderSteps.completed);
+          }
+        },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  Future<void> setStepCompleted(int stepId, bool completed) =>
+      (update(reminderSteps)..where((s) => s.id.equals(stepId)))
+          .write(ReminderStepsCompanion(completed: Value(completed)));
+
+  Future<void> clearCompletion(int reminderId) =>
+      (update(reminderSteps)..where((s) => s.reminderId.equals(reminderId)))
+          .write(const ReminderStepsCompanion(completed: Value(false)));
 
   Stream<List<Reminder>> watchReminders() =>
       (select(reminders)..orderBy([(r) => OrderingTerm(expression: r.hour), (r) => OrderingTerm(expression: r.minute)]))

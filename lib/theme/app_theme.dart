@@ -19,6 +19,10 @@ class AppColors {
   static const onSurface = Color(0xFFE6E1E5);
   static const onSurfaceVariant = Color(0xFFCAC4D0);
   static const danger = Color(0xFFF2B8B5);
+
+  /// Deliberately off-palette: completed steps need to read as done at a
+  /// glance, which the lavender primary cannot do next to other lavender.
+  static const success = Color(0xFF6EDC9B);
 }
 
 /// Every interactive surface in the mockups is either a stadium pill or a

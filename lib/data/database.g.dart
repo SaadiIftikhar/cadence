@@ -776,6 +776,21 @@ class $ReminderStepsTable extends ReminderSteps
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _completedMeta = const VerificationMeta(
+    'completed',
+  );
+  @override
+  late final GeneratedColumn<bool> completed = GeneratedColumn<bool>(
+    'completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -784,6 +799,7 @@ class $ReminderStepsTable extends ReminderSteps
     iconKey,
     timerSeconds,
     position,
+    completed,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -835,6 +851,12 @@ class $ReminderStepsTable extends ReminderSteps
         position.isAcceptableOrUnknown(data['position']!, _positionMeta),
       );
     }
+    if (data.containsKey('completed')) {
+      context.handle(
+        _completedMeta,
+        completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
+      );
+    }
     return context;
   }
 
@@ -868,6 +890,10 @@ class $ReminderStepsTable extends ReminderSteps
         DriftSqlType.int,
         data['${effectivePrefix}position'],
       )!,
+      completed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}completed'],
+      )!,
     );
   }
 
@@ -886,6 +912,10 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
   /// Null means the step has no timer.
   final int? timerSeconds;
   final int position;
+
+  /// Survives leaving and re-entering a routine. Only an explicit Reset
+  /// clears it.
+  final bool completed;
   const ReminderStep({
     required this.id,
     required this.reminderId,
@@ -893,6 +923,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
     this.iconKey,
     this.timerSeconds,
     required this.position,
+    required this.completed,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -907,6 +938,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
       map['timer_seconds'] = Variable<int>(timerSeconds);
     }
     map['position'] = Variable<int>(position);
+    map['completed'] = Variable<bool>(completed);
     return map;
   }
 
@@ -922,6 +954,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
           ? const Value.absent()
           : Value(timerSeconds),
       position: Value(position),
+      completed: Value(completed),
     );
   }
 
@@ -937,6 +970,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
       iconKey: serializer.fromJson<String?>(json['iconKey']),
       timerSeconds: serializer.fromJson<int?>(json['timerSeconds']),
       position: serializer.fromJson<int>(json['position']),
+      completed: serializer.fromJson<bool>(json['completed']),
     );
   }
   @override
@@ -949,6 +983,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
       'iconKey': serializer.toJson<String?>(iconKey),
       'timerSeconds': serializer.toJson<int?>(timerSeconds),
       'position': serializer.toJson<int>(position),
+      'completed': serializer.toJson<bool>(completed),
     };
   }
 
@@ -959,6 +994,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
     Value<String?> iconKey = const Value.absent(),
     Value<int?> timerSeconds = const Value.absent(),
     int? position,
+    bool? completed,
   }) => ReminderStep(
     id: id ?? this.id,
     reminderId: reminderId ?? this.reminderId,
@@ -966,6 +1002,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
     iconKey: iconKey.present ? iconKey.value : this.iconKey,
     timerSeconds: timerSeconds.present ? timerSeconds.value : this.timerSeconds,
     position: position ?? this.position,
+    completed: completed ?? this.completed,
   );
   ReminderStep copyWithCompanion(ReminderStepsCompanion data) {
     return ReminderStep(
@@ -979,6 +1016,7 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
           ? data.timerSeconds.value
           : this.timerSeconds,
       position: data.position.present ? data.position.value : this.position,
+      completed: data.completed.present ? data.completed.value : this.completed,
     );
   }
 
@@ -990,14 +1028,22 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
           ..write('title: $title, ')
           ..write('iconKey: $iconKey, ')
           ..write('timerSeconds: $timerSeconds, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('completed: $completed')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, reminderId, title, iconKey, timerSeconds, position);
+  int get hashCode => Object.hash(
+    id,
+    reminderId,
+    title,
+    iconKey,
+    timerSeconds,
+    position,
+    completed,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1007,7 +1053,8 @@ class ReminderStep extends DataClass implements Insertable<ReminderStep> {
           other.title == this.title &&
           other.iconKey == this.iconKey &&
           other.timerSeconds == this.timerSeconds &&
-          other.position == this.position);
+          other.position == this.position &&
+          other.completed == this.completed);
 }
 
 class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
@@ -1017,6 +1064,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
   final Value<String?> iconKey;
   final Value<int?> timerSeconds;
   final Value<int> position;
+  final Value<bool> completed;
   const ReminderStepsCompanion({
     this.id = const Value.absent(),
     this.reminderId = const Value.absent(),
@@ -1024,6 +1072,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
     this.iconKey = const Value.absent(),
     this.timerSeconds = const Value.absent(),
     this.position = const Value.absent(),
+    this.completed = const Value.absent(),
   });
   ReminderStepsCompanion.insert({
     this.id = const Value.absent(),
@@ -1032,6 +1081,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
     this.iconKey = const Value.absent(),
     this.timerSeconds = const Value.absent(),
     this.position = const Value.absent(),
+    this.completed = const Value.absent(),
   }) : reminderId = Value(reminderId);
   static Insertable<ReminderStep> custom({
     Expression<int>? id,
@@ -1040,6 +1090,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
     Expression<String>? iconKey,
     Expression<int>? timerSeconds,
     Expression<int>? position,
+    Expression<bool>? completed,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1048,6 +1099,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
       if (iconKey != null) 'icon_key': iconKey,
       if (timerSeconds != null) 'timer_seconds': timerSeconds,
       if (position != null) 'position': position,
+      if (completed != null) 'completed': completed,
     });
   }
 
@@ -1058,6 +1110,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
     Value<String?>? iconKey,
     Value<int?>? timerSeconds,
     Value<int>? position,
+    Value<bool>? completed,
   }) {
     return ReminderStepsCompanion(
       id: id ?? this.id,
@@ -1066,6 +1119,7 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
       iconKey: iconKey ?? this.iconKey,
       timerSeconds: timerSeconds ?? this.timerSeconds,
       position: position ?? this.position,
+      completed: completed ?? this.completed,
     );
   }
 
@@ -1090,6 +1144,9 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
     if (position.present) {
       map['position'] = Variable<int>(position.value);
     }
+    if (completed.present) {
+      map['completed'] = Variable<bool>(completed.value);
+    }
     return map;
   }
 
@@ -1101,7 +1158,8 @@ class ReminderStepsCompanion extends UpdateCompanion<ReminderStep> {
           ..write('title: $title, ')
           ..write('iconKey: $iconKey, ')
           ..write('timerSeconds: $timerSeconds, ')
-          ..write('position: $position')
+          ..write('position: $position, ')
+          ..write('completed: $completed')
           ..write(')'))
         .toString();
   }
@@ -1572,6 +1630,7 @@ typedef $$ReminderStepsTableCreateCompanionBuilder =
       Value<String?> iconKey,
       Value<int?> timerSeconds,
       Value<int> position,
+      Value<bool> completed,
     });
 typedef $$ReminderStepsTableUpdateCompanionBuilder =
     ReminderStepsCompanion Function({
@@ -1581,6 +1640,7 @@ typedef $$ReminderStepsTableUpdateCompanionBuilder =
       Value<String?> iconKey,
       Value<int?> timerSeconds,
       Value<int> position,
+      Value<bool> completed,
     });
 
 final class $$ReminderStepsTableReferences
@@ -1643,6 +1703,11 @@ class $$ReminderStepsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$RemindersTableFilterComposer get reminderId {
     final $$RemindersTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -1701,6 +1766,11 @@ class $$ReminderStepsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get completed => $composableBuilder(
+    column: $table.completed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$RemindersTableOrderingComposer get reminderId {
     final $$RemindersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -1750,6 +1820,9 @@ class $$ReminderStepsTableAnnotationComposer
 
   GeneratedColumn<int> get position =>
       $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<bool> get completed =>
+      $composableBuilder(column: $table.completed, builder: (column) => column);
 
   $$RemindersTableAnnotationComposer get reminderId {
     final $$RemindersTableAnnotationComposer composer = $composerBuilder(
@@ -1809,6 +1882,7 @@ class $$ReminderStepsTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<int?> timerSeconds = const Value.absent(),
                 Value<int> position = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
               }) => ReminderStepsCompanion(
                 id: id,
                 reminderId: reminderId,
@@ -1816,6 +1890,7 @@ class $$ReminderStepsTableTableManager
                 iconKey: iconKey,
                 timerSeconds: timerSeconds,
                 position: position,
+                completed: completed,
               ),
           createCompanionCallback:
               ({
@@ -1825,6 +1900,7 @@ class $$ReminderStepsTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<int?> timerSeconds = const Value.absent(),
                 Value<int> position = const Value.absent(),
+                Value<bool> completed = const Value.absent(),
               }) => ReminderStepsCompanion.insert(
                 id: id,
                 reminderId: reminderId,
@@ -1832,6 +1908,7 @@ class $$ReminderStepsTableTableManager
                 iconKey: iconKey,
                 timerSeconds: timerSeconds,
                 position: position,
+                completed: completed,
               ),
           withReferenceMapper: (p0) => p0
               .map(

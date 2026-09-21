@@ -34,6 +34,7 @@ class StepDraft {
     this.title = '',
     this.iconKey,
     this.timerSeconds,
+    this.completed = false,
   });
 
   factory StepDraft.fromRow(ReminderStep row) => StepDraft(
@@ -41,6 +42,7 @@ class StepDraft {
         title: row.title,
         iconKey: row.iconKey,
         timerSeconds: row.timerSeconds,
+        completed: row.completed,
       );
 
   int? id;
@@ -48,12 +50,17 @@ class StepDraft {
   String? iconKey;
   int? timerSeconds;
 
+  /// Carried through a save so that editing a reminder does not silently
+  /// wipe how far through its routine you were.
+  bool completed;
+
   bool get hasTimer => timerSeconds != null && timerSeconds! > 0;
 
   ReminderStepsCompanion toCompanion() => ReminderStepsCompanion(
         title: Value(title),
         iconKey: Value(iconKey),
         timerSeconds: Value(timerSeconds),
+        completed: Value(completed),
       );
 }
 
@@ -116,6 +123,12 @@ class ReminderRepository {
       await NotificationService.instance.scheduleReminder(saved);
     }
   }
+
+  Future<void> markStep(int stepId, bool completed) =>
+      _db.setStepCompleted(stepId, completed);
+
+  Future<void> clearCompletion(int reminderId) =>
+      _db.clearCompletion(reminderId);
 
   Future<List<StepDraft>> draftsFor(int reminderId) async {
     final rows = await _db.stepsFor(reminderId);

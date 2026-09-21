@@ -2,36 +2,35 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/database.dart';
+import '../data/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cookie_timer.dart';
 import '../widgets/pill_tile.dart';
 
 /// Runs a single step. Pops `true` when the user marks it done.
-class RunStepScreen extends StatefulWidget {
+///
+/// The timer never starts on its own — the step opens paused, showing play.
+class RunStepScreen extends ConsumerStatefulWidget {
   const RunStepScreen({super.key, required this.step});
 
   final ReminderStep step;
 
   @override
-  State<RunStepScreen> createState() => _RunStepScreenState();
+  ConsumerState<RunStepScreen> createState() => _RunStepScreenState();
 }
 
-class _RunStepScreenState extends State<RunStepScreen> {
+class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   Timer? _ticker;
   late Duration _remaining = _total;
   bool _running = false;
 
   Duration get _total => Duration(seconds: widget.step.timerSeconds ?? 0);
   bool get _hasTimer => _total > Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    if (_hasTimer) _start();
-  }
+  bool get _finished => _remaining <= Duration.zero;
 
   @override
   void dispose() {
@@ -40,7 +39,10 @@ class _RunStepScreenState extends State<RunStepScreen> {
   }
 
   void _start() {
+    // Pressing play on a finished timer runs it again from the top.
+    if (_finished) _remaining = _total;
     if (_remaining <= Duration.zero) return;
+
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
@@ -61,13 +63,23 @@ class _RunStepScreenState extends State<RunStepScreen> {
     setState(() => _running = false);
   }
 
-  void _restart() {
+  /// Back to the full duration, still paused.
+  void _restartTimer() {
     _ticker?.cancel();
     setState(() {
       _remaining = _total;
       _running = false;
     });
-    _start();
+  }
+
+  Future<void> _reset() async {
+    _restartTimer();
+    await ref.read(repositoryProvider).markStep(widget.step.id, false);
+  }
+
+  Future<void> _done() async {
+    await ref.read(repositoryProvider).markStep(widget.step.id, true);
+    if (mounted) Navigator.pop(context, true);
   }
 
   @override
@@ -100,7 +112,7 @@ class _RunStepScreenState extends State<RunStepScreen> {
                       children: [
                         _CircleControl(
                           icon: _running ? Symbols.pause : Symbols.play_arrow,
-                          tooltip: _running ? 'Pause' : 'Resume',
+                          tooltip: _running ? 'Pause' : 'Start',
                           onTap: _running ? _pause : _start,
                         ),
                         const SizedBox(width: 24),
@@ -108,8 +120,8 @@ class _RunStepScreenState extends State<RunStepScreen> {
                         const SizedBox(width: 24),
                         _CircleControl(
                           icon: Symbols.restart_alt,
-                          tooltip: 'Restart timer',
-                          onTap: _restart,
+                          tooltip: 'Back to full time',
+                          onTap: _restartTimer,
                         ),
                       ],
                     )
@@ -121,12 +133,12 @@ class _RunStepScreenState extends State<RunStepScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _hasTimer ? _restart : null,
+                    onPressed: _reset,
                     icon: const Icon(Symbols.refresh, size: 24),
                     label: const Text('Reset'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context, true),
+                    onPressed: _done,
                     icon: const Icon(Symbols.done_all, size: 24),
                     label: const Text('Done'),
                   ),

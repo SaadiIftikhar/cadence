@@ -11,30 +11,23 @@ import 'run_step_screen.dart';
 
 /// Entry point for running a reminder. A single-step reminder goes straight to
 /// the step screen; a multi-step one shows the checklist from the mockup.
-class RunReminderScreen extends ConsumerStatefulWidget {
+///
+/// Progress lives in the database, so leaving and re-entering keeps whatever
+/// was already ticked off. Only Reset clears it.
+class RunReminderScreen extends ConsumerWidget {
   const RunReminderScreen({super.key, required this.reminderId});
 
   final int reminderId;
 
-  @override
-  ConsumerState<RunReminderScreen> createState() => _RunReminderScreenState();
-}
-
-class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
-  final _completed = <int>{};
-
-  Future<void> _runStep(ReminderStep step) async {
-    final done = await Navigator.of(context).push<bool>(
+  Future<void> _runStep(BuildContext context, ReminderStep step) async {
+    await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => RunStepScreen(step: step)),
     );
-    if (done == true && mounted) {
-      setState(() => _completed.add(step.id));
-    }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final steps = ref.watch(stepsProvider(widget.reminderId));
+  Widget build(BuildContext context, WidgetRef ref) {
+    final steps = ref.watch(stepsProvider(reminderId));
 
     return steps.when(
       loading: () => const Scaffold(
@@ -59,9 +52,8 @@ class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
 
         if (items.length == 1) return RunStepScreen(step: items.first);
 
-        final allDone = items.every((s) => _completed.contains(s.id));
-        final currentIndex =
-            items.indexWhere((s) => !_completed.contains(s.id));
+        final doneCount = items.where((s) => s.completed).length;
+        final currentIndex = items.indexWhere((s) => !s.completed);
 
         return Scaffold(
           appBar: AppBar(
@@ -69,7 +61,7 @@ class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
               icon: const Icon(Symbols.arrow_back),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text('${_completed.length} of ${items.length} done'),
+            title: Text('$doneCount of ${items.length} done'),
           ),
           body: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -77,18 +69,17 @@ class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
             separatorBuilder: (_, _) => const SizedBox(height: 14),
             itemBuilder: (context, i) {
               final step = items[i];
-              final done = _completed.contains(step.id);
               return PillTile(
                 label: step.title.trim().isEmpty
                     ? 'Step ${i + 1}'
                     : step.title.trim(),
                 iconKey: step.iconKey,
                 filled: i == currentIndex,
-                dimmed: done,
-                onTap: () => _runStep(step),
-                trailing: done
+                dimmed: step.completed,
+                onTap: () => _runStep(context, step),
+                trailing: step.completed
                     ? const Icon(Symbols.check_circle,
-                        size: 24, color: AppColors.primary)
+                        size: 24, color: AppColors.success)
                     : (step.timerSeconds != null && step.timerSeconds! > 0
                         ? Text(
                             formatDuration(
@@ -110,9 +101,11 @@ class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _completed.isEmpty
+                    onPressed: doneCount == 0
                         ? null
-                        : () => setState(_completed.clear),
+                        : () => ref
+                            .read(repositoryProvider)
+                            .clearCompletion(reminderId),
                     icon: const Icon(Symbols.refresh, size: 24),
                     label: const Text('Reset'),
                   ),
@@ -121,7 +114,7 @@ class _RunReminderScreenState extends ConsumerState<RunReminderScreen> {
                     icon: Icon(
                       Symbols.done_all,
                       size: 24,
-                      color: allDone ? AppColors.primary : null,
+                      color: currentIndex == -1 ? AppColors.success : null,
                     ),
                     label: const Text('Done'),
                   ),
