@@ -123,31 +123,38 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('the next step slides in from the right', (tester) async {
+  testWidgets('the finished step leaves left as the next arrives from right',
+      (tester) async {
     final id = await addRoutine(['Water', 'Stretch']);
     await pump(tester, id);
 
-    await tester.tap(find.text('Water'));
-    await settle(tester);
-    await tester.tap(find.text('Done'));
-
     // Scoped to the step screen: the routine list underneath names both
     // steps too, so a bare text finder could measure the wrong widget.
-    final heading = find.descendant(
-      of: find.byType(RunStepScreen),
-      matching: find.text('Stretch'),
-    );
+    Finder heading(String title) => find.descendant(
+          of: find.byType(RunStepScreen),
+          matching: find.text(title),
+        );
 
+    await tester.tap(find.text('Water'));
+    await settle(tester);
+    final restingX = tester.getTopLeft(heading('Water')).dx;
+
+    await tester.tap(find.text('Done'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
-    final entering = tester.getTopLeft(heading).dx;
+
+    // Mid-change both are on screen, heading the same way: the finished one
+    // already left of where it sat, the next still right of where it will.
+    expect(tester.getTopLeft(heading('Water')).dx, lessThan(restingX));
+    final entering = tester.getTopLeft(heading('Stretch')).dx;
 
     await settle(tester);
-    final landed = tester.getTopLeft(heading).dx;
+    final landed = tester.getTopLeft(heading('Stretch')).dx;
 
-    // Started to the right of where it settles, by well beyond the few pixels
-    // a scale or a fade would shift it.
+    // Travelled by well beyond the few pixels a scale or a fade would shift
+    // it, and the one it replaced is gone rather than left lying underneath.
     expect(entering - landed, greaterThan(50));
+    expect(heading('Water'), findsNothing);
 
     await finish(tester);
   });

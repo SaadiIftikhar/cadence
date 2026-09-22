@@ -203,6 +203,21 @@ ThemeData buildAppTheme() {
       behavior: SnackBarBehavior.floating,
       shape: AppShapes.card,
     ),
+    // Left alone, the AM/PM pair picks up tertiaryContainer, which here is the
+    // accent pink — the one control in the picker that came out a different
+    // colour from everything else the app highlights.
+    timePickerTheme: TimePickerThemeData(
+      dayPeriodColor: WidgetStateColor.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? AppColors.primary
+            : Colors.transparent,
+      ),
+      dayPeriodTextColor: WidgetStateColor.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? AppColors.onPrimary
+            : AppColors.onSurfaceVariant,
+      ),
+    ),
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.surfaceLow,
       surfaceTintColor: Colors.transparent,

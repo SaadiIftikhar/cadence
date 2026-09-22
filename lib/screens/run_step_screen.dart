@@ -222,22 +222,24 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                   switchInCurve: AppMotion.curve,
                   switchOutCurve: AppMotion.curve,
                   transitionBuilder: (child, animation) {
-                    // Only the step arriving travels; the one being replaced
-                    // stays where it is and fades, so the two do not slide
-                    // past each other in opposite directions.
+                    // Both steps travel the same way, leftward: the finished
+                    // one carries on out to the left while the next comes in
+                    // from the right, so it reads as one moving along to the
+                    // next rather than as two pictures cross-fading.
+                    //
+                    // The outgoing child is handed an animation running from
+                    // 1 back to 0, so its tween starts where it ends up —
+                    // off to the left — and ends in place.
                     final arriving = child.key == ValueKey(_step.id);
-                    final faded =
-                        FadeTransition(opacity: animation, child: child);
-                    if (!arriving) return faded;
-
-                    // In from the right, the direction a list is read and so
-                    // the one that reads as going on to the next thing.
                     return SlideTransition(
                       position: Tween(
-                        begin: const Offset(0.25, 0),
+                        begin: Offset(arriving ? 0.25 : -0.25, 0),
                         end: Offset.zero,
                       ).animate(animation),
-                      child: faded,
+                      // Kept alongside the movement because the two overlap
+                      // while they pass: without it you read two icons and
+                      // two names at once.
+                      child: FadeTransition(opacity: animation, child: child),
                     );
                   },
                   child: _stepContent(title),

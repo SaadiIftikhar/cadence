@@ -928,6 +928,27 @@ void main() {
     });
   });
 
+  group('App theme', () {
+    test('the time picker highlights AM/PM in the app purple', () {
+      // Left to Material's defaults this comes out of tertiaryContainer,
+      // which is the accent pink — the wrong colour for a selection, and the
+      // only place in the app that would have used it for one.
+      final dayPeriod = buildAppTheme().timePickerTheme.dayPeriodColor;
+
+      expect(
+        WidgetStateProperty.resolveAs<Color?>(
+          dayPeriod,
+          const {WidgetState.selected},
+        ),
+        AppColors.primary,
+      );
+      expect(
+        WidgetStateProperty.resolveAs<Color?>(dayPeriod, const <WidgetState>{}),
+        Colors.transparent,
+      );
+    });
+  });
+
   group('Notification payloads', () {
     Reminder reminder({required bool alarmEnabled, int id = 7}) => Reminder(
           id: id,
