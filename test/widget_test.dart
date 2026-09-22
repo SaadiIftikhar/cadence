@@ -265,23 +265,48 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('a timed step keeps its name in the pill at the top',
+    testWidgets('both kinds of step lead with the icon and name',
         (tester) async {
-      await pumpTimed(tester, timerSeconds: 300);
+      // Timed and untimed differ by the clock, not by the layout around it.
+      for (final timer in [null, 300]) {
+        await pumpTimed(tester, timerSeconds: timer);
 
-      expect(find.byType(PillTile), findsOneWidget);
-      expect(find.byType(CookieTimer), findsOneWidget);
+        expect(find.byType(PillTile), findsNothing,
+            reason: 'timer=$timer still shows the old pill');
+        expect(find.text('Stretch'), findsOneWidget, reason: 'timer=$timer');
+        expect(find.byIcon(IconCatalog.resolve('alarm')), findsOneWidget,
+            reason: 'timer=$timer');
+      }
     });
 
-    testWidgets('a step with no timer shows its icon and name in the middle',
-        (tester) async {
-      await pumpTimed(tester);
+    testWidgets('only a timed step gets a clock', (tester) async {
+      await pumpTimed(tester, timerSeconds: 300);
+      expect(find.byType(CookieTimer), findsOneWidget);
 
-      // The pill would sit where nothing else needs the room, so it goes.
-      expect(find.byType(PillTile), findsNothing);
+      await pumpTimed(tester);
       expect(find.byType(CookieTimer), findsNothing);
-      expect(find.text('Stretch'), findsOneWidget);
-      expect(find.byIcon(IconCatalog.resolve('alarm')), findsOneWidget);
+    });
+
+    testWidgets('a timer runs down to zero and stops', (tester) async {
+      await pumpTimed(tester, timerSeconds: 2);
+      expect(find.text('00:02'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Start'));
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('00:01'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('00:00'), findsOneWidget);
+
+      // Finishing chimes; a device that cannot play it must not take the
+      // screen down with it.
+      expect(tester.takeException(), isNull);
+
+      // The ticker has stopped, so nothing counts past zero.
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('00:00'), findsOneWidget);
     });
 
     Future<void> pumpStep(WidgetTester tester, {required bool completed}) async {

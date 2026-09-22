@@ -7,13 +7,13 @@ import 'tappable_icon.dart';
 
 /// The stadium row used for steps and reminders throughout the designs.
 ///
-/// Outlined is the resting state; [filled] marks the active/current item.
+/// Always outlined: the outline is what carries meaning here, either plainly
+/// or split into one arc per step.
 class PillTile extends StatelessWidget {
   const PillTile({
     super.key,
     required this.label,
     this.iconKey,
-    this.filled = false,
     this.onTap,
     this.onLongPress,
     this.trailing,
@@ -39,7 +39,6 @@ class PillTile extends StatelessWidget {
   /// When set and covering more than one step, the outline is drawn as one
   /// arc per step with the completed ones filled.
   final ({int done, int total})? progress;
-  final bool filled;
   final bool dimmed;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -55,9 +54,9 @@ class PillTile extends StatelessWidget {
     final showSegments = segments != null && segments.total > 1;
 
     final tile = Material(
-      color: filled ? AppColors.surfaceFilled : Colors.transparent,
+      color: Colors.transparent,
       // The painter supplies the outline when segmented, so drop the plain one.
-      shape: (filled || showSegments)
+      shape: showSegments
           ? AppShapes.pill
           : StadiumBorder(
               side: BorderSide(

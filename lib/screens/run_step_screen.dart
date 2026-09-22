@@ -7,10 +7,10 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/database.dart';
 import '../data/providers.dart';
+import '../services/chime.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/cookie_timer.dart';
-import '../widgets/pill_tile.dart';
 
 /// Runs a single step. Pops `true` when the user marks it done.
 ///
@@ -57,6 +57,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
           _running = false;
           _ticker?.cancel();
           HapticFeedback.heavyImpact();
+          Chime.instance.timerFinished();
         }
       });
     });
@@ -104,21 +105,22 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // A timed step needs its name out of the way at the top, because
-            // the middle belongs to the clock. A step with no timer has that
-            // space going spare, so the name takes it.
-            if (_hasTimer)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: PillTile(
-                  label: title,
-                  iconKey: widget.step.iconKey,
-                  filled: true,
-                ),
-              ),
+            // Both kinds of step lead with the same thing: the icon that was
+            // chosen for it and its name. A timed one shrinks that to make
+            // room for the clock underneath, rather than banishing the name
+            // to a pill at the top and looking like a different screen.
             Expanded(
-              child: _hasTimer
-                  ? Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _StepHeading(
+                    iconKey: widget.step.iconKey,
+                    title: title,
+                    compact: _hasTimer,
+                  ),
+                  if (_hasTimer) ...[
+                    const SizedBox(height: 40),
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _CircleControl(
@@ -126,17 +128,19 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                           label: _running ? 'Pause' : 'Start',
                           onTap: _running ? _pause : _start,
                         ),
-                        const SizedBox(width: 24),
+                        const SizedBox(width: 20),
                         CookieTimer(remaining: _remaining, running: _running),
-                        const SizedBox(width: 24),
+                        const SizedBox(width: 20),
                         _CircleControl(
                           icon: Symbols.restart_alt,
                           label: 'Back to full time',
                           onTap: _restartTimer,
                         ),
                       ],
-                    )
-                  : _StepFocus(iconKey: widget.step.iconKey, title: title),
+                    ),
+                  ],
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -174,32 +178,39 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   }
 }
 
-/// What a step with no timer shows: its own icon, large, with its name under
-/// it, occupying the space a countdown would have had.
-class _StepFocus extends StatelessWidget {
-  const _StepFocus({required this.iconKey, required this.title});
+/// The step's own icon with its name beneath. [compact] shrinks it to leave
+/// room for a countdown; without one it fills the screen on its own.
+class _StepHeading extends StatelessWidget {
+  const _StepHeading({
+    required this.iconKey,
+    required this.title,
+    required this.compact,
+  });
 
   final String? iconKey;
   final String title;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             IconCatalog.resolve(iconKey),
-            size: 112,
+            size: compact ? 64 : 112,
             color: AppColors.primary,
           ),
-          const SizedBox(height: 28),
+          SizedBox(height: compact ? 16 : 28),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 26,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: compact ? 22 : 26,
               height: 1.25,
               fontWeight: FontWeight.w600,
               color: AppColors.onSurface,
