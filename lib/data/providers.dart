@@ -95,6 +95,23 @@ List<Reminder> orderedForHome(
     });
 }
 
+/// Whether a one-off reminder's day has already been and gone.
+///
+/// An empty [Reminder.daysMask] means "today only" — the day it was made and
+/// no other. Once [now] has rolled past that date there is nothing left for it
+/// to do. A repeating reminder never lapses, however old it is.
+bool hasLapsed(Reminder reminder, DateTime now) {
+  if (reminder.daysMask != 0) return false;
+  final made = reminder.createdAt;
+  return DateTime(made.year, made.month, made.day)
+      .isBefore(DateTime(now.year, now.month, now.day));
+}
+
+/// The same rule over a whole list: what the home screen still has reason to
+/// show, and what is still worth arming a notification for.
+List<Reminder> withoutLapsedOneOffs(List<Reminder> all, DateTime now) =>
+    all.where((r) => !hasLapsed(r, now)).toList();
+
 /// Reminders that repeat on [day]'s weekday.
 ///
 /// A reminder with an empty [Reminder.daysMask] fires once at its next
@@ -218,8 +235,13 @@ class ReminderRepository {
 
   /// Re-arms every scheduled notification. Android drops alarms on reboot and
   /// on app reinstall, so this runs at startup.
+  ///
+  /// Yesterday's one-offs are left out: re-arming one would schedule it for
+  /// the next time its clock time comes round, which is tomorrow — a reminder
+  /// meant for a day that has passed ringing on a day it was never for.
   Future<void> rescheduleAll() async {
     final all = await _db.watchReminders().first;
-    await NotificationService.instance.rescheduleAll(all);
+    await NotificationService.instance
+        .rescheduleAll(withoutLapsedOneOffs(all, DateTime.now()));
   }
 }

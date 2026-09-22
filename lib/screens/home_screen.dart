@@ -202,14 +202,18 @@ class ReminderListView extends ConsumerWidget {
         message: 'Restarting the app usually clears this.',
       ),
       data: (all) {
-        if (all.isEmpty) {
+        // Filtered before the emptiness check, or a list holding nothing but
+        // yesterday's one-offs would render as a blank screen instead of
+        // saying there is nothing there.
+        final items =
+            orderedForHome(withoutLapsedOneOffs(all, DateTime.now()), progress);
+        if (items.isEmpty) {
           return const EmptyState(
             icon: Symbols.alarm_add,
             title: 'No reminders yet',
             message: 'Tap + to create one.',
           );
         }
-        final items = orderedForHome(all, progress);
         return ListView.separated(
           // Bottom padding clears the floating add button.
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),

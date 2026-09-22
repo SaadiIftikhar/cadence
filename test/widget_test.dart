@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/data/providers.dart';
+import 'package:step_reminder/screens/calendar_screen.dart';
 import 'package:step_reminder/screens/edit_reminder_screen.dart';
 import 'package:step_reminder/screens/edit_step_screen.dart';
 import 'package:step_reminder/screens/run_step_screen.dart';
@@ -781,6 +782,106 @@ void main() {
         2: StepProgress(total: 0, done: 0),
       };
       expect(idsOf(list, progress), [2, 1]);
+    });
+  });
+
+  group('Calendar screen', () {
+    testWidgets('the day below the grid stays put as the months change shape',
+        (tester) async {
+      // Tall enough that the whole screen is laid out at once, whatever the
+      // month grid's height.
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            remindersProvider.overrideWith((ref) => Stream.value(<Reminder>[])),
+          ],
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const Scaffold(body: CalendarScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double dayListTop() =>
+          tester.getTopLeft(find.text('Nothing scheduled')).dy;
+
+      final settled = dayListTop();
+
+      // A year covers every shape a month grid takes — four rows through six.
+      for (var month = 1; month <= 12; month++) {
+        await tester.tap(find.byIcon(Symbols.chevron_right));
+        await tester.pumpAndSettle();
+        expect(dayListTop(), settled,
+            reason: '$month month(s) on, the day below the grid had moved');
+      }
+    });
+  });
+
+  group('withoutLapsedOneOffs', () {
+    Reminder made(int id, int daysMask, DateTime createdAt) => Reminder(
+          id: id,
+          title: 'reminder $id',
+          iconKey: 'alarm',
+          hour: 8,
+          minute: 0,
+          daysMask: daysMask,
+          notificationsEnabled: true,
+          alarmEnabled: false,
+          multiStep: false,
+          enabled: true,
+          createdAt: createdAt,
+        );
+
+    final now = DateTime(2026, 9, 22, 10, 0);
+
+    test('a today-only reminder made today is still there', () {
+      final list = [made(1, 0, DateTime(2026, 9, 22, 7, 30))];
+      expect(withoutLapsedOneOffs(list, now).single.id, 1);
+    });
+
+    test('a today-only reminder is gone once the day has rolled over', () {
+      final list = [made(1, 0, DateTime(2026, 9, 21, 8, 0))];
+      expect(withoutLapsedOneOffs(list, now), isEmpty);
+    });
+
+    test('a repeating reminder stays however old it is', () {
+      final list = [made(1, 0x7F, DateTime(2024, 1, 1))];
+      expect(withoutLapsedOneOffs(list, now).single.id, 1);
+    });
+
+    test('the date decides it, not how many hours have passed', () {
+      // Made a minute before midnight and checked a minute after it: barely
+      // any time has gone by, but the day it was for has.
+      expect(
+        withoutLapsedOneOffs(
+          [made(1, 0, DateTime(2026, 9, 21, 23, 59))],
+          DateTime(2026, 9, 22, 0, 1),
+        ),
+        isEmpty,
+      );
+      // Nearly a full day later, but still the same day it was made for.
+      expect(
+        withoutLapsedOneOffs(
+          [made(1, 0, DateTime(2026, 9, 22, 0, 1))],
+          DateTime(2026, 9, 22, 23, 59),
+        ),
+        isNotEmpty,
+      );
+    });
+
+    test('only the lapsed ones are dropped out of a mixed list', () {
+      final list = [
+        made(1, 0, DateTime(2026, 9, 21)),
+        made(2, 0, DateTime(2026, 9, 22)),
+        made(3, 0x7F, DateTime(2024, 1, 1)),
+      ];
+      expect(withoutLapsedOneOffs(list, now).map((r) => r.id), [2, 3]);
     });
   });
 

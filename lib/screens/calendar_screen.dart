@@ -48,6 +48,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               selectedDayPredicate: (d) => isSameDay(d, _selected),
               eventLoader: (d) => remindersOnDay(all, d),
               startingDayOfWeek: StartingDayOfWeek.monday,
+              // A month grid is four, five or six rows deep depending on how
+              // the dates fall. Holding it at six keeps the date and the day's
+              // reminders in one place instead of sliding up and down the
+              // screen as you page through the months.
+              sixWeekMonthsEnforced: true,
               onDaySelected: (selected, focused) => setState(() {
                 _selected = selected;
                 _focused = focused;
@@ -91,7 +96,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 markersMaxCount: 3,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             Text(
               DateFormat('EEEE, d MMMM').format(_selected),
               textAlign: TextAlign.center,
