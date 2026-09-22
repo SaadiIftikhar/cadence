@@ -243,6 +243,47 @@ void main() {
   });
 
   group('Run step screen', () {
+    Future<void> pumpTimed(WidgetTester tester, {int? timerSeconds}) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: RunStepScreen(
+              step: ReminderStep(
+                id: 1,
+                reminderId: 1,
+                title: 'Stretch',
+                iconKey: 'alarm',
+                timerSeconds: timerSeconds,
+                position: 0,
+                completed: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('a timed step keeps its name in the pill at the top',
+        (tester) async {
+      await pumpTimed(tester, timerSeconds: 300);
+
+      expect(find.byType(PillTile), findsOneWidget);
+      expect(find.byType(CookieTimer), findsOneWidget);
+    });
+
+    testWidgets('a step with no timer shows its icon and name in the middle',
+        (tester) async {
+      await pumpTimed(tester);
+
+      // The pill would sit where nothing else needs the room, so it goes.
+      expect(find.byType(PillTile), findsNothing);
+      expect(find.byType(CookieTimer), findsNothing);
+      expect(find.text('Stretch'), findsOneWidget);
+      expect(find.byIcon(IconCatalog.resolve('alarm')), findsOneWidget);
+    });
+
     Future<void> pumpStep(WidgetTester tester, {required bool completed}) async {
       await tester.pumpWidget(
         ProviderScope(

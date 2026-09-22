@@ -59,6 +59,9 @@ class _EditStepScreenState extends State<EditStepScreen> {
 
   Future<void> _pickIcon() async {
     _dismissIconHint();
+    // Dropped before leaving, or Flutter hands focus back to the title field
+    // on the way in and the keyboard reappears over the picker's results.
+    FocusManager.instance.primaryFocus?.unfocus();
 
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
@@ -67,6 +70,7 @@ class _EditStepScreenState extends State<EditStepScreen> {
   }
 
   void _save() {
+    FocusManager.instance.primaryFocus?.unfocus();
     final draft = widget.draft ?? StepDraft();
     draft
       ..title = _title.text.trim()

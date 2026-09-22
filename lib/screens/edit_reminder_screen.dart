@@ -152,6 +152,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   Future<void> _pickIcon() async {
     // Tapping the icon is the thing the hint was there to teach.
     _dismissIconHint();
+    // Dropped before leaving, or Flutter hands focus back to the name field on
+    // the way in and the keyboard reappears over the picker's results.
+    FocusManager.instance.primaryFocus?.unfocus();
 
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
@@ -161,6 +164,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
   /// Retargets an already-added step's icon without opening its whole editor.
   Future<void> _pickStepIcon(int index) async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => IconPickerScreen(selected: _steps[index].iconKey),
@@ -247,6 +251,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _save() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     final title = _title.text.trim();
     final missingTitle = title.isEmpty;
     final missingTime = _time == null;
@@ -379,13 +384,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             ),
           ),
           if (_showIconHint) IconHint(onDismiss: _dismissIconHint),
-          if (!_routine) ...[
-            const SizedBox(height: 18),
-            TimerPicker(
-              seconds: _stepSeconds,
-              onChanged: (v) => setState(() => _stepSeconds = v),
-            ),
-          ],
           const SizedBox(height: 18),
           ValuePill(
             icon: Symbols.schedule,
@@ -405,6 +403,13 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             placeholder: _daysMask == 0,
             onTap: _pickDays,
           ),
+          if (!_routine) ...[
+            const SizedBox(height: 12),
+            TimerPicker(
+              seconds: _stepSeconds,
+              onChanged: (v) => setState(() => _stepSeconds = v),
+            ),
+          ],
           const SizedBox(height: 18),
           LabeledSwitch(
             label: 'Notifications',

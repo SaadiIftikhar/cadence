@@ -8,6 +8,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
+import '../util/icon_catalog.dart';
 import '../widgets/cookie_timer.dart';
 import '../widgets/pill_tile.dart';
 
@@ -103,14 +104,18 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-              child: PillTile(
-                label: title,
-                iconKey: widget.step.iconKey,
-                filled: true,
+            // A timed step needs its name out of the way at the top, because
+            // the middle belongs to the clock. A step with no timer has that
+            // space going spare, so the name takes it.
+            if (_hasTimer)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: PillTile(
+                  label: title,
+                  iconKey: widget.step.iconKey,
+                  filled: true,
+                ),
               ),
-            ),
             Expanded(
               child: _hasTimer
                   ? Row(
@@ -131,7 +136,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                         ),
                       ],
                     )
-                  : const SizedBox.expand(),
+                  : _StepFocus(iconKey: widget.step.iconKey, title: title),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
@@ -164,6 +169,43 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What a step with no timer shows: its own icon, large, with its name under
+/// it, occupying the space a countdown would have had.
+class _StepFocus extends StatelessWidget {
+  const _StepFocus({required this.iconKey, required this.title});
+
+  final String? iconKey;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            IconCatalog.resolve(iconKey),
+            size: 112,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 28),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 26,
+              height: 1.25,
+              fontWeight: FontWeight.w600,
+              color: AppColors.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }
