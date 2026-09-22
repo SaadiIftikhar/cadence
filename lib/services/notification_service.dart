@@ -6,8 +6,11 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../data/database.dart';
 
-/// Schedules the two flavours of reminder the designs call for: a normal
-/// notification, and an "Alarm" that wakes the screen via a full-screen intent.
+/// Schedules the two flavours of reminder the designs call for.
+///
+/// A notification chimes once and waits. An alarm rings the phone's own alarm
+/// tone at alarm volume and keeps ringing until it is dealt with, and asks to
+/// take over the screen if the phone is locked.
 class NotificationService {
   NotificationService._();
   static final instance = NotificationService._();
@@ -15,7 +18,19 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
 
   static const _reminderChannel = 'reminders';
-  static const _alarmChannel = 'alarms';
+
+  /// Bumped when the channel's fixed settings had to change; see [init].
+  static const _alarmChannel = 'alarms_v2';
+  static const _retiredAlarmChannel = 'alarms';
+
+  /// The phone's own alarm tone, so an alarm sounds like the alarms the user
+  /// already knows rather than like a message arriving.
+  static const _systemAlarmSound = 'content://settings/system/alarm_alert';
+
+  /// `Notification.FLAG_INSISTENT`: repeat the sound until the notification is
+  /// dealt with. Without it an alarm rings once and gives up, which is the one
+  /// thing an alarm must not do.
+  static final _insistent = Int32List.fromList(<int>[4]);
 
   /// Notification ids are derived from the reminder id so they can be cancelled
   /// without keeping a side table. Seven weekday slots plus one one-shot slot.
@@ -59,13 +74,22 @@ class NotificationService {
         importance: Importance.high,
       ),
     );
+    // The first alarm channel was created without a sound of its own, so it
+    // played the short default notification chime and an alarm was
+    // indistinguishable from a reminder. A channel's settings are fixed once
+    // Android has seen it, so correcting that needs a new id; the old one is
+    // dropped so it stops cluttering the app's notification settings.
+    await android?.deleteNotificationChannel(channelId: _retiredAlarmChannel);
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _alarmChannel,
         'Alarms',
-        description: 'Full-screen alarms that wake the device',
+        description: 'Full-screen alarms that ring until dismissed',
         importance: Importance.max,
         audioAttributesUsage: AudioAttributesUsage.alarm,
+        sound: UriAndroidNotificationSound(_systemAlarmSound),
+        enableVibration: true,
+        enableLights: true,
       ),
     );
 
@@ -131,13 +155,22 @@ class NotificationService {
         isAlarm ? 'Alarms' : 'Reminders',
         importance: isAlarm ? Importance.max : Importance.high,
         priority: isAlarm ? Priority.max : Priority.high,
-        category:
-            isAlarm ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.reminder,
+        category: isAlarm
+            ? AndroidNotificationCategory.alarm
+            : AndroidNotificationCategory.reminder,
         fullScreenIntent: isAlarm,
-        audioAttributesUsage:
-            isAlarm ? AudioAttributesUsage.alarm : AudioAttributesUsage.notification,
+        audioAttributesUsage: isAlarm
+            ? AudioAttributesUsage.alarm
+            : AudioAttributesUsage.notification,
+        sound: isAlarm
+            ? const UriAndroidNotificationSound(_systemAlarmSound)
+            : null,
+        additionalFlags: isAlarm ? _insistent : null,
         playSound: true,
         enableVibration: true,
+        // Tapping it opens the reminder and stops the ringing. Not ongoing,
+        // so it can still be swiped away.
+        autoCancel: true,
         visibility: NotificationVisibility.public,
       ),
     );
