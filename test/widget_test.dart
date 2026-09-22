@@ -508,6 +508,61 @@ void main() {
     });
   });
 
+  group('Edit step screen validation', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    Future<void> pumpEditStep(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: const EditStepScreen(allowDelete: false),
+        ),
+      );
+      await tester.pump();
+    }
+
+    InputBorder? titleBorder(WidgetTester tester) {
+      final field = tester.widget<TextField>(find.byType(TextField));
+      return field.decoration?.enabledBorder;
+    }
+
+    testWidgets('a fresh step does not start with its title reddened',
+        (tester) async {
+      await pumpEditStep(tester);
+      expect(tester.takeException(), isNull);
+      expect(titleBorder(tester), isNull);
+    });
+
+    testWidgets('saving with no title reddens it instead of saving',
+        (tester) async {
+      await pumpEditStep(tester);
+
+      await tester.tap(find.bySemanticsLabel('Save step'));
+      await tester.pump();
+
+      final border = titleBorder(tester);
+      expect(border, isA<OutlineInputBorder>());
+      expect((border as OutlineInputBorder).borderSide.color, AppColors.error);
+      // Nothing to pop back to here, so a successful save would have thrown;
+      // reaching this line at all means it declined to pop.
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('typing a title clears the red border', (tester) async {
+      await pumpEditStep(tester);
+      await tester.tap(find.bySemanticsLabel('Save step'));
+      await tester.pump();
+      expect(titleBorder(tester), isNotNull);
+
+      await tester.enterText(find.byType(TextField), 'Stretch');
+      await tester.pump();
+
+      expect(titleBorder(tester), isNull);
+    });
+  });
+
   group('showAnchoredMenu', () {
     Future<GlobalKey> pumpHost(
       WidgetTester tester,

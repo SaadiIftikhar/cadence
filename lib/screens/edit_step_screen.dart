@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/app_prefs.dart';
 import '../data/providers.dart';
+import '../theme/app_theme.dart';
 import '../widgets/hint_callout.dart';
 import '../widgets/tappable_icon.dart';
 import '../widgets/timer_picker.dart';
@@ -36,6 +37,11 @@ class _EditStepScreenState extends State<EditStepScreen> {
 
   /// Shown once ever, and only if a reminder editor has not shown it already.
   bool _showIconHint = false;
+
+  /// Set when Save was tapped while the title was empty; reddens its
+  /// outline until it is filled in, same as the routine name and time do
+  /// on the screen this one is pushed from.
+  bool _titleInvalid = false;
 
   @override
   void initState() {
@@ -71,9 +77,14 @@ class _EditStepScreenState extends State<EditStepScreen> {
 
   void _save() {
     FocusManager.instance.primaryFocus?.unfocus();
+    final title = _title.text.trim();
+    if (title.isEmpty) {
+      setState(() => _titleInvalid = true);
+      return;
+    }
     final draft = widget.draft ?? StepDraft();
     draft
-      ..title = _title.text.trim()
+      ..title = title
       ..iconKey = _iconKey
       ..timerSeconds = _seconds > 0 ? _seconds : null;
     Navigator.pop(context, StepEditResult.save(draft));
@@ -108,9 +119,18 @@ class _EditStepScreenState extends State<EditStepScreen> {
             controller: _title,
             style: const TextStyle(fontSize: 19),
             textCapitalization: TextCapitalization.sentences,
+            onChanged: (v) {
+              if (_titleInvalid && v.trim().isNotEmpty) {
+                setState(() => _titleInvalid = false);
+              }
+            },
             decoration: InputDecoration(
               labelText: 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
+              enabledBorder:
+                  _titleInvalid ? AppShapes.invalidFieldBorder : null,
+              focusedBorder:
+                  _titleInvalid ? AppShapes.invalidFieldBorder : null,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 8),
                 child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),

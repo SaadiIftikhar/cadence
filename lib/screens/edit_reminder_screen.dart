@@ -333,13 +333,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Outline only, but an outline you cannot miss: a 1px muted red on a
-  /// near-black screen was easy to scroll straight past.
-  static const _invalidBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.all(Radius.circular(40)),
-    borderSide: BorderSide(color: AppColors.error, width: 3),
-  );
-
   String get _screenTitle {
     if (_routine) return _isNew ? 'New routine' : 'Edit routine';
     return _isNew ? 'New step' : 'Edit step';
@@ -387,8 +380,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             decoration: InputDecoration(
               labelText: _routine ? 'Routine name' : 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
-              enabledBorder: _titleInvalid ? _invalidBorder : null,
-              focusedBorder: _titleInvalid ? _invalidBorder : null,
+              enabledBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
+              focusedBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
               prefixIcon: Padding(
                 padding: const EdgeInsets.only(left: 12, right: 8),
                 child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),

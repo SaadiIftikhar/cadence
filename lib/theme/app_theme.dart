@@ -63,6 +63,15 @@ class AppShapes {
   static final card = RoundedRectangleBorder(
     borderRadius: BorderRadius.circular(28),
   );
+
+  /// A text field's outline when a save was attempted while it was still
+  /// empty. A 1px muted red was easy to scroll straight past on a
+  /// near-black screen, so this is loud instead. Shared by every editor
+  /// screen so a required field always reddens the same way.
+  static const invalidFieldBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.all(Radius.circular(40)),
+    borderSide: BorderSide(color: AppColors.error, width: 3),
+  );
 }
 
 ThemeData buildAppTheme() {
