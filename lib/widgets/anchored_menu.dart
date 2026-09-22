@@ -34,7 +34,7 @@ Future<T?> showAnchoredMenu<T>({
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 140),
+    transitionDuration: AppMotion.fast,
     transitionBuilder: (ctx, animation, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
       child: child,

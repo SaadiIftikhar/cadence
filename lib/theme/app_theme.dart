@@ -6,6 +6,26 @@ const double kCardImageRatioX = 16;
 const double kCardImageRatioY = 9;
 const double kCardImageAspect = kCardImageRatioX / kCardImageRatioY;
 
+/// One motion vocabulary, so the same kind of change always takes the same
+/// time and eases the same way.
+///
+/// Feedback reads as instant below roughly 200ms; a change the eye should
+/// follow needs longer, and past about 500ms it starts to feel slow.
+class AppMotion {
+  const AppMotion._();
+
+  /// Acknowledging a tap, or a small element flipping state.
+  static const fast = Duration(milliseconds: 180);
+
+  /// Something visibly moving, resizing or being replaced.
+  static const medium = Duration(milliseconds: 300);
+
+  /// A deliberate transition worth watching, such as progress filling in.
+  static const slow = Duration(milliseconds: 450);
+
+  static const curve = Curves.easeOutCubic;
+}
+
 /// Palette sampled from the design mockups.
 class AppColors {
   static const background = Color(0xFF121316);

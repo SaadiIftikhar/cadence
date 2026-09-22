@@ -125,6 +125,39 @@ void main() {
       expect(find.byType(SegmentedProgressBorder), findsNothing);
     });
 
+    testWidgets('cached geometry still follows a changed size or count',
+        (tester) async {
+      // The arcs are cached per size, shape and count, so a stale entry would
+      // show up as the wrong layout after any of those change.
+      Future<void> pumpAt(double width, int total) => tester.pumpWidget(
+            MaterialApp(
+              theme: buildAppTheme(),
+              home: Scaffold(
+                body: Center(
+                  child: SegmentedProgressBorder(
+                    done: 1,
+                    total: total,
+                    shape: AppShapes.pill,
+                    child: SizedBox(width: width, height: 72),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+      for (final (width, total) in [
+        (300.0, 4),
+        (300.0, 7),
+        (220.0, 4),
+        (300.0, 4),
+      ]) {
+        await pumpAt(width, total);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull,
+            reason: 'width=$width total=$total threw');
+      }
+    });
+
     testWidgets('traces a rounded card, not just a pill', (tester) async {
       // The image-card case: a tall rounded rectangle rather than a stadium.
       await tester.pumpWidget(

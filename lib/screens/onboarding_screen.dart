@@ -68,8 +68,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _goTo(int page) => _controller.animateToPage(
         page,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.medium,
+        curve: AppMotion.curve,
       );
 
   @override
@@ -211,8 +211,8 @@ class _Dots extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
+                  duration: AppMotion.medium,
+                  curve: AppMotion.curve,
                   height: 8,
                   width: i == index ? 26 : 8,
                   decoration: BoxDecoration(

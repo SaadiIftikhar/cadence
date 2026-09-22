@@ -36,8 +36,8 @@ class SegmentedProgressBorder extends StatelessWidget {
     // when several steps complete at once, as Done on a routine does.
     return TweenAnimationBuilder<double>(
       tween: Tween(end: done.toDouble()),
-      duration: const Duration(milliseconds: 450),
-      curve: Curves.easeOutCubic,
+      duration: AppMotion.slow,
+      curve: AppMotion.curve,
       builder: (context, value, child) => CustomPaint(
         foregroundPainter: _SegmentedBorderPainter(
           done: value,
@@ -64,24 +64,13 @@ class _SegmentedBorderPainter extends CustomPainter {
   final ShapeBorder shape;
 
   static const _stroke = SegmentedProgressBorder.strokeWidth;
-  static const _maxGap = 10.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (total <= 0) return;
 
-    final bounds = (Offset.zero & size).deflate(_stroke / 2);
-    if (bounds.width <= 0 || bounds.height <= 0) return;
-
-    final metrics = shape.getOuterPath(bounds).computeMetrics().toList();
-    if (metrics.isEmpty) return;
-    final metric = metrics.first;
-    if (metric.length <= 0) return;
-
-    final segment = metric.length / total;
-    // The gap shrinks as segments multiply, so a long routine degrades into a
-    // near-solid ring instead of a dotted mess.
-    final gap = math.min(_maxGap, segment * 0.28);
+    final segments = _segmentsFor(size, shape, total);
+    if (segments.isEmpty) return;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -89,19 +78,74 @@ class _SegmentedBorderPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    for (var i = 0; i < total; i++) {
-      final start = i * segment + gap / 2;
-      final end = (i + 1) * segment - gap / 2;
-      if (end <= start) continue;
-
+    for (var i = 0; i < segments.length; i++) {
       final fill = (done - i).clamp(0.0, 1.0);
       paint.color =
           Color.lerp(AppColors.outlineDim, AppColors.success, fill)!;
-      canvas.drawPath(metric.extractPath(start, end), paint);
+      canvas.drawPath(segments[i], paint);
     }
   }
 
   @override
   bool shouldRepaint(covariant _SegmentedBorderPainter old) =>
       old.done != done || old.total != total || old.shape != shape;
+}
+
+const _maxGap = 10.0;
+
+/// Where the arcs sit depends only on the size, the shape and the step count.
+/// Filling them animates colour alone, so the geometry is worked out once and
+/// reused for every frame of that animation instead of rebuilt per frame.
+final _segmentCache = <_SegmentKey, List<Path>>{};
+
+List<Path> _segmentsFor(Size size, ShapeBorder shape, int total) {
+  final key = _SegmentKey(size, shape, total);
+  final cached = _segmentCache[key];
+  if (cached != null) return cached;
+
+  const stroke = SegmentedProgressBorder.strokeWidth;
+  final bounds = (Offset.zero & size).deflate(stroke / 2);
+  if (bounds.width <= 0 || bounds.height <= 0) return const [];
+
+  final metrics = shape.getOuterPath(bounds).computeMetrics().toList();
+  if (metrics.isEmpty) return const [];
+  final metric = metrics.first;
+  if (metric.length <= 0) return const [];
+
+  final segment = metric.length / total;
+  // The gap shrinks as segments multiply, so a long routine degrades into a
+  // near-solid ring instead of a dotted mess.
+  final gap = math.min(_maxGap, segment * 0.28);
+
+  final paths = <Path>[];
+  for (var i = 0; i < total; i++) {
+    final start = i * segment + gap / 2;
+    final end = (i + 1) * segment - gap / 2;
+    if (end <= start) continue;
+    paths.add(metric.extractPath(start, end));
+  }
+
+  // Bounded: a handful of row sizes and step counts is all this ever sees,
+  // and dropping the lot simply rebuilds them on the next frame.
+  if (_segmentCache.length >= 64) _segmentCache.clear();
+  _segmentCache[key] = paths;
+  return paths;
+}
+
+class _SegmentKey {
+  const _SegmentKey(this.size, this.shape, this.total);
+
+  final Size size;
+  final ShapeBorder shape;
+  final int total;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SegmentKey &&
+      other.size == size &&
+      other.shape == shape &&
+      other.total == total;
+
+  @override
+  int get hashCode => Object.hash(size, shape, total);
 }

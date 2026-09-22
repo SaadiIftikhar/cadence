@@ -70,7 +70,7 @@ class _TimerPickerState extends State<TimerPicker> {
                   ),
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
+                    duration: AppMotion.fast,
                     child: const Icon(Symbols.arrow_drop_down, size: 30),
                   ),
                 ],
@@ -79,7 +79,7 @@ class _TimerPickerState extends State<TimerPicker> {
           ),
         ),
         AnimatedCrossFade(
-          duration: const Duration(milliseconds: 180),
+          duration: AppMotion.fast,
           crossFadeState:
               _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           firstChild: Padding(

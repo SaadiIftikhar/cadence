@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -17,15 +19,28 @@ class IconPickerScreen extends StatefulWidget {
 class _IconPickerScreenState extends State<IconPickerScreen> {
   final _controller = TextEditingController();
   late List<String> _results = IconCatalog.suggested;
+  Timer? _debounce;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
+  /// A search walks every name in both icon sets, so it runs once the typing
+  /// pauses rather than once per keystroke.
   void _search(String query) {
-    setState(() => _results = IconCatalog.search(query));
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 160), () {
+      if (mounted) setState(() => _results = IconCatalog.search(query));
+    });
+  }
+
+  void _clear() {
+    _debounce?.cancel();
+    _controller.clear();
+    setState(() => _results = IconCatalog.suggested);
   }
 
   @override
@@ -57,10 +72,7 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
                     const BoxConstraints(minWidth: 0, minHeight: 0),
                 suffixIcon: IconButton(
                   icon: const Icon(Symbols.close, size: 26),
-                  onPressed: () {
-                    _controller.clear();
-                    _search('');
-                  },
+                  onPressed: _clear,
                 ),
               ),
             ),

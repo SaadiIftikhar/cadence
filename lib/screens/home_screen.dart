@@ -216,6 +216,10 @@ class ReminderListView extends ConsumerWidget {
           itemCount: items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 16),
           itemBuilder: (context, i) => _ReminderEntry(
+            // Keyed by reminder rather than position, so finishing one and
+            // watching it drop down the list moves the row it belongs to
+            // instead of reshuffling state between neighbours.
+            key: ValueKey(items[i].id),
             reminder: items[i],
             progress: progress[items[i].id] ??
                 const StepProgress(total: 0, done: 0),
@@ -227,7 +231,11 @@ class ReminderListView extends ConsumerWidget {
 }
 
 class _ReminderEntry extends ConsumerStatefulWidget {
-  const _ReminderEntry({required this.reminder, required this.progress});
+  const _ReminderEntry({
+    super.key,
+    required this.reminder,
+    required this.progress,
+  });
 
   final Reminder reminder;
   final StepProgress progress;

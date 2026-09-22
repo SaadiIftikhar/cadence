@@ -15,6 +15,53 @@ import 'run_step_screen.dart';
 ///
 /// Progress lives in the database, so leaving and re-entering keeps whatever
 /// was already ticked off. Only Reset clears it.
+/// A step's tick, or its countdown if it has one and is not done yet.
+///
+/// The tick scales in rather than appearing, which is the only acknowledgement
+/// the list gives that a step was just finished.
+class _StepTrailing extends StatelessWidget {
+  const _StepTrailing({required this.step});
+
+  final ReminderStep step;
+
+  @override
+  Widget build(BuildContext context) {
+    final timer = step.timerSeconds;
+
+    final Widget child;
+    if (step.completed) {
+      child = const Icon(
+        Symbols.check_circle,
+        key: ValueKey('done'),
+        size: 24,
+        color: AppColors.success,
+      );
+    } else if (timer != null && timer > 0) {
+      child = Text(
+        formatDuration(Duration(seconds: timer)),
+        key: const ValueKey('timer'),
+        style: const TextStyle(
+          fontSize: 15,
+          color: AppColors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    } else {
+      child = const SizedBox.shrink(key: ValueKey('none'));
+    }
+
+    return AnimatedSwitcher(
+      duration: AppMotion.fast,
+      switchInCurve: AppMotion.curve,
+      transitionBuilder: (child, animation) => ScaleTransition(
+        scale: animation,
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: child,
+    );
+  }
+}
+
 class RunReminderScreen extends ConsumerWidget {
   const RunReminderScreen({super.key, required this.reminderId});
 
@@ -114,20 +161,7 @@ class RunReminderScreen extends ConsumerWidget {
                 iconKey: step.iconKey,
                 dimmed: step.completed,
                 onTap: () => _runStep(context, step),
-                trailing: step.completed
-                    ? const Icon(Symbols.check_circle,
-                        size: 24, color: AppColors.success)
-                    : (step.timerSeconds != null && step.timerSeconds! > 0
-                        ? Text(
-                            formatDuration(
-                                Duration(seconds: step.timerSeconds!)),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )
-                        : null),
+                trailing: _StepTrailing(step: step),
               );
             },
           ),
