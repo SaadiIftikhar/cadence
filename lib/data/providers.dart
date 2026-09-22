@@ -35,6 +35,45 @@ final backupServiceProvider = FutureProvider<BackupService>((ref) async {
   );
 });
 
+/// The step after [currentId] that still needs doing, or null if nothing
+/// later in the list does.
+///
+/// Only looks forward, in list order, never back and never wrapping to the
+/// start: "next" means the next one, not any incomplete step picked from
+/// anywhere in the routine. That is what lets Done double as the only way to
+/// move through a routine — there is no separate forward control whose
+/// meaning could disagree with what back does.
+ReminderStep? nextIncompleteStep(List<ReminderStep> steps, int currentId) {
+  final index = steps.indexWhere((s) => s.id == currentId);
+  if (index == -1) return null;
+  for (var i = index + 1; i < steps.length; i++) {
+    if (!steps[i].completed) return steps[i];
+  }
+  return null;
+}
+
+/// Moves a step within a routine, taking the indices a [ReorderableListView]'s
+/// `onReorderItem` reports — `newIndex` is already the index the item should
+/// end up at, the shift from removing it at `oldIndex` already accounted for
+/// by the caller.
+///
+/// Position numbers are not stored here: saving rewrites them from this
+/// order, which is what keeps them contiguous.
+List<StepDraft> reorderSteps(
+  List<StepDraft> steps,
+  int oldIndex,
+  int newIndex,
+) {
+  if (oldIndex < 0 || oldIndex >= steps.length) return steps;
+
+  final target = newIndex.clamp(0, steps.length - 1);
+  if (target == oldIndex) return steps;
+
+  final next = [...steps];
+  next.insert(target, next.removeAt(oldIndex));
+  return next;
+}
+
 /// Home order: still to do first, earliest time of day first within that, and
 /// anything finished pushed to the bottom keeping the same time order.
 List<Reminder> orderedForHome(
@@ -54,6 +93,18 @@ List<Reminder> orderedForHome(
       // Dart's sort is not stable, so break remaining ties deterministically.
       return a.id.compareTo(b.id);
     });
+}
+
+/// Reminders that repeat on [day]'s weekday.
+///
+/// A reminder with an empty [Reminder.daysMask] fires once at its next
+/// occurrence rather than repeating, so it has no weekday of its own and
+/// never matches here — a one-off belongs on the home list, not scattered
+/// across a calendar day it may or may not still land on by the time that
+/// day arrives.
+List<Reminder> remindersOnDay(List<Reminder> all, DateTime day) {
+  final bit = 1 << (day.weekday - 1);
+  return all.where((r) => r.enabled && r.daysMask & bit != 0).toList();
 }
 
 /// An unsaved step. The edit screen builds these up before the reminder itself

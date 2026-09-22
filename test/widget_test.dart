@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/data/providers.dart';
+import 'package:step_reminder/screens/edit_reminder_screen.dart';
+import 'package:step_reminder/screens/edit_step_screen.dart';
 import 'package:step_reminder/screens/run_step_screen.dart';
 import 'package:step_reminder/theme/app_theme.dart';
+import 'package:step_reminder/util/duration_format.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
 import 'package:step_reminder/widgets/anchored_menu.dart';
-import 'package:step_reminder/widgets/cookie_timer.dart';
 import 'package:step_reminder/widgets/form_fields.dart';
+import 'package:step_reminder/widgets/hint_callout.dart';
 import 'package:step_reminder/widgets/pill_tile.dart';
-import 'package:step_reminder/widgets/icon_hint.dart';
 import 'package:step_reminder/widgets/segmented_border.dart';
+import 'package:step_reminder/widgets/timer_pill.dart';
 
 void main() {
   group('formatDuration', () {
@@ -76,7 +80,7 @@ void main() {
 
   group('describeDays', () {
     test('names the common presets', () {
-      expect(describeDays(0), 'Once');
+      expect(describeDays(0), 'Today only');
       expect(describeDays(0x7F), 'Every day');
       expect(describeDays(0x1F), 'Weekdays');
       expect(describeDays(0x60), 'Weekend');
@@ -225,13 +229,18 @@ void main() {
     });
   });
 
-  group('IconHint', () {
-    testWidgets('names the gesture and dismisses on Got it', (tester) async {
+  group('HintCallout', () {
+    testWidgets('shows its message and dismisses on Got it', (tester) async {
       var dismissed = 0;
       await tester.pumpWidget(
         MaterialApp(
           theme: buildAppTheme(),
-          home: Scaffold(body: IconHint(onDismiss: () => dismissed++)),
+          home: Scaffold(
+            body: HintCallout(
+              message: 'Tap the icon to change it',
+              onDismiss: () => dismissed++,
+            ),
+          ),
         ),
       );
 
@@ -239,6 +248,49 @@ void main() {
       await tester.tap(find.text('Got it'));
       await tester.pumpAndSettle();
       expect(dismissed, 1);
+    });
+  });
+
+  group('TimerPill', () {
+    Future<void> pumpPill(
+      WidgetTester tester, {
+      required Duration remaining,
+      required Duration total,
+    }) {
+      return tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(
+            body: Center(child: TimerPill(remaining: remaining, total: total)),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('shows the formatted time remaining', (tester) async {
+      await pumpPill(
+        tester,
+        remaining: const Duration(minutes: 4, seconds: 5),
+        total: const Duration(minutes: 5),
+      );
+      expect(find.text('04:05'), findsOneWidget);
+    });
+
+    testWidgets('a fresh timer, a half-run one and a finished one all paint',
+        (tester) async {
+      const total = Duration(minutes: 5);
+      for (final remaining in [total, total ~/ 2, Duration.zero]) {
+        await pumpPill(tester, remaining: remaining, total: total);
+        await tester.pump(const Duration(seconds: 1));
+        expect(tester.takeException(), isNull,
+            reason: 'remaining=$remaining threw');
+      }
+    });
+
+    testWidgets('a step with no timer at all does not divide by zero',
+        (tester) async {
+      await pumpPill(tester, remaining: Duration.zero, total: Duration.zero);
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -281,10 +333,25 @@ void main() {
 
     testWidgets('only a timed step gets a clock', (tester) async {
       await pumpTimed(tester, timerSeconds: 300);
-      expect(find.byType(CookieTimer), findsOneWidget);
+      expect(find.byType(TimerPill), findsOneWidget);
 
       await pumpTimed(tester);
-      expect(find.byType(CookieTimer), findsNothing);
+      expect(find.byType(TimerPill), findsNothing);
+    });
+
+    testWidgets(
+        'the heading is the same size whether or not the step has a timer',
+        (tester) async {
+      Size headingIconSize(WidgetTester t) =>
+          t.getSize(find.byIcon(IconCatalog.resolve('alarm')));
+
+      await pumpTimed(tester);
+      final withoutTimer = headingIconSize(tester);
+
+      await pumpTimed(tester, timerSeconds: 300);
+      final withTimer = headingIconSize(tester);
+
+      expect(withTimer, withoutTimer);
     });
 
     testWidgets('a timer runs down to zero and stops', (tester) async {
@@ -361,6 +428,83 @@ void main() {
 
       expect(resetButton(tester).onPressed, isNotNull);
       expect(tickIcon(tester).color, AppColors.success);
+    });
+  });
+
+  group('Edit reminder screen validation', () {
+    setUp(() {
+      // initState reads AppPrefs (backed by shared_preferences) to decide
+      // whether to show the one-time icon/time hints; without a mock store
+      // that read never resolves under flutter_test.
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    Future<void> pumpNewRoutine(WidgetTester tester) async {
+      // The form is taller than the default 600px test surface, and a
+      // ListView only builds what is within its viewport plus a small cache
+      // extent — Add step sits past that, so without more room it is simply
+      // never in the tree for find to see, whether reddened or not.
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const EditReminderScreen(isRoutine: true),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    BorderSide? addStepBorder(WidgetTester tester) {
+      final button = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Add step'),
+      );
+      return button.style?.side?.resolve(const <WidgetState>{});
+    }
+
+    testWidgets('a fresh routine does not start with Add step reddened',
+        (tester) async {
+      await pumpNewRoutine(tester);
+      expect(tester.takeException(), isNull);
+      expect(addStepBorder(tester), isNull);
+    });
+
+    testWidgets('saving an empty routine reddens Add step', (tester) async {
+      await pumpNewRoutine(tester);
+
+      await tester.tap(find.bySemanticsLabel('Save'));
+      await tester.pump();
+
+      expect(addStepBorder(tester)?.color, AppColors.error);
+    });
+
+    testWidgets('adding a step clears the red border', (tester) async {
+      await pumpNewRoutine(tester);
+      await tester.tap(find.bySemanticsLabel('Save'));
+      await tester.pump();
+      expect(addStepBorder(tester)?.color, AppColors.error);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Add step'));
+      await tester.pumpAndSettle();
+      // The step editor opens with an empty title; give it one and save.
+      // Scoped to the pushed screen: the routine editor underneath has a
+      // TextField of its own, still in the tree while this one is on top.
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(EditStepScreen),
+          matching: find.byType(TextField),
+        ),
+        'Stretch',
+      );
+      await tester.tap(find.bySemanticsLabel('Save step'));
+      await tester.pumpAndSettle();
+
+      expect(addStepBorder(tester), isNull);
     });
   });
 
@@ -492,6 +636,166 @@ void main() {
         2: StepProgress(total: 0, done: 0),
       };
       expect(idsOf(list, progress), [2, 1]);
+    });
+  });
+
+  group('remindersOnDay', () {
+    Reminder reminder(int id, int daysMask, {bool enabled = true}) =>
+        Reminder(
+          id: id,
+          title: 'reminder $id',
+          iconKey: 'alarm',
+          hour: 8,
+          minute: 0,
+          daysMask: daysMask,
+          notificationsEnabled: true,
+          alarmEnabled: false,
+          multiStep: false,
+          enabled: enabled,
+          createdAt: DateTime(2026),
+        );
+
+    // 2026-09-21 was a Monday, so this whole week's dates are known weekdays.
+    final monday = DateTime(2026, 9, 21);
+    final wednesday = DateTime(2026, 9, 23);
+    final sunday = DateTime(2026, 9, 27);
+
+    test('a today-only reminder never appears, on any day', () {
+      final list = [reminder(1, 0)];
+      for (final day in [monday, wednesday, sunday]) {
+        expect(remindersOnDay(list, day), isEmpty,
+            reason: '$day should not show a mask-0 reminder');
+      }
+    });
+
+    test('a reminder appears only on the weekdays it repeats on', () {
+      // Bit 0 is Monday, bit 2 is Wednesday.
+      final list = [reminder(1, 1 | 1 << 2)];
+      expect(remindersOnDay(list, monday).single.id, 1);
+      expect(remindersOnDay(list, wednesday).single.id, 1);
+      expect(remindersOnDay(list, sunday), isEmpty);
+    });
+
+    test('every day shows an every-day reminder', () {
+      final list = [reminder(1, 0x7F)];
+      for (final day in [monday, wednesday, sunday]) {
+        expect(remindersOnDay(list, day).single.id, 1);
+      }
+    });
+
+    test('a turned-off reminder is excluded even on its own day', () {
+      final list = [reminder(1, 1, enabled: false)]; // Monday, but off
+      expect(remindersOnDay(list, monday), isEmpty);
+    });
+  });
+
+  group('reorderSteps', () {
+    // newIndex here already carries the adjustment ReorderableListView's
+    // onReorderItem performs before calling the app back, so these are the
+    // exact arguments the widget hands the function.
+    List<StepDraft> stepsNamed(List<String> titles) =>
+        [for (final t in titles) StepDraft(title: t)];
+
+    List<String> titlesOf(List<StepDraft> steps) =>
+        [for (final s in steps) s.title];
+
+    test('moving the first step after the third lands it there', () {
+      final steps = stepsNamed(['A', 'B', 'C', 'D']);
+      final result = reorderSteps(steps, 0, 2);
+      expect(titlesOf(result), ['B', 'C', 'A', 'D']);
+    });
+
+    test('moving the last step to the front lands it there', () {
+      final steps = stepsNamed(['A', 'B', 'C', 'D']);
+      final result = reorderSteps(steps, 3, 0);
+      expect(titlesOf(result), ['D', 'A', 'B', 'C']);
+    });
+
+    test('dropping a step back where it started changes nothing', () {
+      final steps = stepsNamed(['A', 'B', 'C']);
+      final result = reorderSteps(steps, 1, 1);
+      expect(titlesOf(result), ['A', 'B', 'C']);
+    });
+
+    test('every step keeps its identity across a move, not just its title',
+        () {
+      final steps = stepsNamed(['A', 'B', 'C']);
+      final b = steps[1];
+      final result = reorderSteps(steps, 1, 0);
+      expect(identical(result[0], b), isTrue);
+    });
+
+    test('an out-of-range oldIndex is ignored rather than throwing', () {
+      final steps = stepsNamed(['A', 'B']);
+      expect(reorderSteps(steps, -1, 0), same(steps));
+      expect(reorderSteps(steps, 5, 0), same(steps));
+    });
+
+    test('positions come out contiguous and in the new order', () {
+      // This is what save() rewrites from, so a gap here is a gap a user
+      // could see reflected in step numbering.
+      final steps = stepsNamed(['A', 'B', 'C', 'D', 'E']);
+      final result = reorderSteps(steps, 4, 1);
+      expect(titlesOf(result), ['A', 'E', 'B', 'C', 'D']);
+      expect(result.length, steps.length);
+      expect(result.toSet().length, result.length,
+          reason: 'no step should be duplicated or dropped by a move');
+    });
+  });
+
+  group('nextIncompleteStep', () {
+    ReminderStep stepAt(int id, int position, {bool completed = false}) =>
+        ReminderStep(
+          id: id,
+          reminderId: 1,
+          title: 'step $id',
+          iconKey: null,
+          timerSeconds: null,
+          position: position,
+          completed: completed,
+        );
+
+    test('finds the next one that still needs doing', () {
+      final steps = [
+        stepAt(1, 0, completed: true),
+        stepAt(2, 1),
+        stepAt(3, 2),
+      ];
+      expect(nextIncompleteStep(steps, 1)?.id, 2);
+    });
+
+    test('skips over ones already done to find the one after that', () {
+      final steps = [
+        stepAt(1, 0),
+        stepAt(2, 1, completed: true),
+        stepAt(3, 2),
+      ];
+      expect(nextIncompleteStep(steps, 1)?.id, 3);
+    });
+
+    test('never looks backward, even when an earlier step is still open',
+        () {
+      final steps = [
+        stepAt(1, 0), // still open
+        stepAt(2, 1),
+        stepAt(3, 2, completed: true),
+      ];
+      // Finishing 2 should not send the user back to 1.
+      expect(nextIncompleteStep(steps, 2), isNull);
+    });
+
+    test('the last step has nothing after it', () {
+      final steps = [stepAt(1, 0), stepAt(2, 1)];
+      expect(nextIncompleteStep(steps, 2), isNull);
+    });
+
+    test('a step id not in the list finds nothing', () {
+      final steps = [stepAt(1, 0), stepAt(2, 1)];
+      expect(nextIncompleteStep(steps, 99), isNull);
+    });
+
+    test('a single-step list has nothing after it', () {
+      expect(nextIncompleteStep([stepAt(1, 0)], 1), isNull);
     });
   });
 

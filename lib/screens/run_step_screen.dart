@@ -10,15 +10,20 @@ import '../data/providers.dart';
 import '../services/chime.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
-import '../widgets/cookie_timer.dart';
+import '../widgets/timer_pill.dart';
 
-/// Runs a single step. Pops `true` when the user marks it done.
+/// Runs a single step. Pops `true` when the user leaves after marking it done.
 ///
 /// The timer never starts on its own — the step opens paused, showing play.
 class RunStepScreen extends ConsumerStatefulWidget {
-  const RunStepScreen({super.key, required this.step});
+  const RunStepScreen({super.key, required this.step, this.reminderId});
 
   final ReminderStep step;
+
+  /// Set only when opened from within a routine's checklist, so Done can look
+  /// for what comes next. Null for a reminder that is just the one step, which
+  /// has nothing to advance to.
+  final int? reminderId;
 
   @override
   ConsumerState<RunStepScreen> createState() => _RunStepScreenState();
@@ -84,9 +89,34 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
     await ref.read(repositoryProvider).markStep(widget.step.id, false);
   }
 
+  /// Marks the step done, then moves straight to whatever comes next in the
+  /// routine. That is the whole answer to a step needing "forward" navigation:
+  /// Done already means "I'm finished here, take me onward," so a separate
+  /// forward control would only duplicate it and raise the question of what
+  /// back should do to match — a question a checklist should not have to
+  /// answer, since it has no fixed order to walk back through.
   Future<void> _done() async {
     setState(() => _completed = true);
-    await ref.read(repositoryProvider).markStep(widget.step.id, true);
+    final repo = ref.read(repositoryProvider);
+    await repo.markStep(widget.step.id, true);
+    if (!mounted) return;
+
+    final reminderId = widget.reminderId;
+    if (reminderId != null) {
+      final steps = await ref.read(databaseProvider).stepsFor(reminderId);
+      final next = nextIncompleteStep(steps, widget.step.id);
+      if (next != null) {
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) =>
+                RunStepScreen(step: next, reminderId: reminderId),
+          ),
+        );
+        return;
+      }
+    }
+
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -105,41 +135,45 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Both kinds of step lead with the same thing: the icon that was
-            // chosen for it and its name. A timed one shrinks that to make
-            // room for the clock underneath, rather than banishing the name
-            // to a pill at the top and looking like a different screen.
+            // Both kinds of step lead with exactly the same thing, at the
+            // same size: the icon that was chosen for it and its name. A
+            // timed step used to shrink this to make room for a clock beside
+            // it; now the clock is a row of its own underneath, so the two
+            // kinds of step look identical until you reach it.
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _StepHeading(
-                    iconKey: widget.step.iconKey,
-                    title: title,
-                    compact: _hasTimer,
-                  ),
-                  if (_hasTimer) ...[
-                    const SizedBox(height: 40),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _CircleControl(
-                          icon: _running ? Symbols.pause : Symbols.play_arrow,
-                          label: _running ? 'Pause' : 'Start',
-                          onTap: _running ? _pause : _start,
-                        ),
-                        const SizedBox(width: 20),
-                        CookieTimer(remaining: _remaining, running: _running),
-                        const SizedBox(width: 20),
-                        _CircleControl(
-                          icon: Symbols.restart_alt,
-                          label: 'Back to full time',
-                          onTap: _restartTimer,
-                        ),
-                      ],
-                    ),
+              child: Padding(
+                // A floor under the natural centring, so the controls read as
+                // sitting a little below the heading and a little above the
+                // Reset/Done row even when the content nearly fills the space.
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _StepHeading(iconKey: widget.step.iconKey, title: title),
+                    if (_hasTimer) ...[
+                      const SizedBox(height: 40),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CircleControl(
+                            icon:
+                                _running ? Symbols.pause : Symbols.play_arrow,
+                            label: _running ? 'Pause' : 'Start',
+                            onTap: _running ? _pause : _start,
+                          ),
+                          const SizedBox(width: 20),
+                          TimerPill(remaining: _remaining, total: _total),
+                          const SizedBox(width: 20),
+                          _CircleControl(
+                            icon: Symbols.restart_alt,
+                            label: 'Back to full time',
+                            onTap: _restartTimer,
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
             Padding(
@@ -178,18 +212,13 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   }
 }
 
-/// The step's own icon with its name beneath. [compact] shrinks it to leave
-/// room for a countdown; without one it fills the screen on its own.
+/// The step's own icon with its name beneath, always at the same size and
+/// position whether or not the step has a timer.
 class _StepHeading extends StatelessWidget {
-  const _StepHeading({
-    required this.iconKey,
-    required this.title,
-    required this.compact,
-  });
+  const _StepHeading({required this.iconKey, required this.title});
 
   final String? iconKey;
   final String title;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -200,17 +229,17 @@ class _StepHeading extends StatelessWidget {
         children: [
           Icon(
             IconCatalog.resolve(iconKey),
-            size: compact ? 64 : 112,
+            size: 112,
             color: AppColors.primary,
           ),
-          SizedBox(height: compact ? 16 : 28),
+          const SizedBox(height: 28),
           Text(
             title,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: compact ? 22 : 26,
+            style: const TextStyle(
+              fontSize: 26,
               height: 1.25,
               fontWeight: FontWeight.w600,
               color: AppColors.onSurface,

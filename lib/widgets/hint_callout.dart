@@ -2,22 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-/// A one-off note pointing up at the icon beside a title field, explaining
-/// that the icon is also the button that changes it.
+/// A one-off note pointing up at the control above it, explaining something
+/// the control cannot say for itself.
 ///
-/// Shown once for the whole app rather than once per screen: the point is
-/// learned the first time, and a hint that keeps reappearing stops being a
-/// hint and becomes clutter.
-class IconHint extends StatelessWidget {
-  const IconHint({
+/// Each kind is shown once for the whole app rather than once per screen: the
+/// point is learned the first time, and a hint that keeps reappearing stops
+/// being a hint and becomes clutter.
+class HintCallout extends StatelessWidget {
+  const HintCallout({
     super.key,
+    required this.message,
     required this.onDismiss,
     this.arrowInset = 30,
   });
 
+  final String message;
   final VoidCallback onDismiss;
 
-  /// Distance from the left edge to the arrow's tip, lined up with the icon
+  /// Distance from the left edge to the arrow's tip, lined up with whatever
   /// it points at.
   final double arrowInset;
 
@@ -44,11 +46,12 @@ class IconHint extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Tap the icon to change it',
-                    style: TextStyle(
+                    message,
+                    style: const TextStyle(
                       fontSize: 15,
+                      height: 1.3,
                       fontWeight: FontWeight.w600,
                       color: AppColors.onPrimary,
                     ),

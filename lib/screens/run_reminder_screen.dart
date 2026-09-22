@@ -5,16 +5,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../theme/app_theme.dart';
-import '../widgets/cookie_timer.dart';
+import '../util/duration_format.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/pill_tile.dart';
 import 'run_step_screen.dart';
 
-/// Entry point for running a reminder. A single-step reminder goes straight to
-/// the step screen; a multi-step one shows the checklist from the mockup.
-///
-/// Progress lives in the database, so leaving and re-entering keeps whatever
-/// was already ticked off. Only Reset clears it.
 /// A step's tick, or its countdown if it has one and is not done yet.
 ///
 /// The tick scales in rather than appearing, which is the only acknowledgement
@@ -62,6 +57,12 @@ class _StepTrailing extends StatelessWidget {
   }
 }
 
+/// Entry point for running a reminder. A single-step reminder goes straight to
+/// the step screen; a multi-step one shows the checklist from the mockup.
+///
+/// Progress lives in the database, so leaving and re-entering keeps whatever
+/// was already ticked off. Reset asks first, since it can undo far more than
+/// one tap's worth of work; Done on a single step needs no such guard.
 class RunReminderScreen extends ConsumerWidget {
   const RunReminderScreen({super.key, required this.reminderId});
 
@@ -93,8 +94,35 @@ class RunReminderScreen extends ConsumerWidget {
 
   Future<void> _runStep(BuildContext context, ReminderStep step) async {
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => RunStepScreen(step: step)),
+      MaterialPageRoute(
+        builder: (_) => RunStepScreen(step: step, reminderId: reminderId),
+      ),
     );
+  }
+
+  Future<bool> _confirmReset(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset this routine?'),
+        content: const Text(
+          'Every step will go back to not done, including ones you already '
+          'finished. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset',
+                style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   @override
@@ -172,11 +200,17 @@ class RunReminderScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
+                      // Confirmed: a routine can have far more to lose than a
+                      // single step, and a stray tap should not be able to
+                      // erase a morning's worth of ticks silently.
                       onPressed: doneCount == 0
                           ? null
-                          : () => ref
-                              .read(repositoryProvider)
-                              .setAllCompleted(reminderId, false),
+                          : () async {
+                              if (!await _confirmReset(context)) return;
+                              await ref
+                                  .read(repositoryProvider)
+                                  .setAllCompleted(reminderId, false);
+                            },
                       icon: const Icon(Symbols.refresh, size: 24),
                       label: const Text('Reset'),
                     ),

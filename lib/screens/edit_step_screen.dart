@@ -3,7 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/app_prefs.dart';
 import '../data/providers.dart';
-import '../widgets/icon_hint.dart';
+import '../widgets/hint_callout.dart';
 import '../widgets/tappable_icon.dart';
 import '../widgets/timer_picker.dart';
 import 'icon_picker_screen.dart';
@@ -119,7 +119,11 @@ class _EditStepScreenState extends State<EditStepScreen> {
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          if (_showIconHint) IconHint(onDismiss: _dismissIconHint),
+          if (_showIconHint)
+            HintCallout(
+              message: 'Tap the icon to change it',
+              onDismiss: _dismissIconHint,
+            ),
           const SizedBox(height: 26),
           const Divider(),
           const SizedBox(height: 26),

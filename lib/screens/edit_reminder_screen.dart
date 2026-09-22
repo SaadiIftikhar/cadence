@@ -12,10 +12,10 @@ import '../data/app_prefs.dart';
 import '../data/providers.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import '../util/duration_format.dart';
 import '../util/icon_catalog.dart';
-import '../widgets/cookie_timer.dart';
 import '../widgets/form_fields.dart';
-import '../widgets/icon_hint.dart';
+import '../widgets/hint_callout.dart';
 import '../widgets/pill_tile.dart';
 import '../widgets/tappable_icon.dart';
 import '../widgets/timer_picker.dart';
@@ -68,8 +68,13 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   bool _titleInvalid = false;
   bool _timeInvalid = false;
 
-  /// Shown once ever, the first time someone reaches an editor.
+  /// Same idea for a routine's step list: there is no single field to redden,
+  /// so Add step's own border carries it instead.
+  bool _stepsInvalid = false;
+
+  /// Each shown once ever, the first time someone reaches an editor.
   bool _showIconHint = false;
+  bool _showTimeHint = false;
 
   bool get _isNew => widget.reminderId == null;
 
@@ -79,6 +84,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     _load();
     AppPrefs.seenIconHint().then((seen) {
       if (!seen && mounted) setState(() => _showIconHint = true);
+    });
+    AppPrefs.seenTimeHint().then((seen) {
+      if (!seen && mounted) setState(() => _showTimeHint = true);
     });
   }
 
@@ -126,6 +134,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _pickTime() async {
+    _dismissTimeHint();
     final picked = await showTimePicker(
       context: context,
       initialTime: _time ?? const TimeOfDay(hour: 8, minute: 0),
@@ -147,6 +156,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     if (!_showIconHint) return;
     setState(() => _showIconHint = false);
     AppPrefs.markIconHintSeen();
+  }
+
+  void _dismissTimeHint() {
+    if (!_showTimeHint) return;
+    setState(() => _showTimeHint = false);
+    AppPrefs.markTimeHintSeen();
   }
 
   Future<void> _pickIcon() async {
@@ -231,7 +246,10 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ),
     );
     if (result?.draft == null) return;
-    setState(() => _steps = [..._steps, result!.draft!]);
+    setState(() {
+      _steps = [..._steps, result!.draft!];
+      _stepsInvalid = false;
+    });
   }
 
   Future<void> _editStep(int index) async {
@@ -255,20 +273,16 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     final title = _title.text.trim();
     final missingTitle = title.isEmpty;
     final missingTime = _time == null;
+    final missingSteps = _routine && _steps.isEmpty;
 
-    // Both are marked at once, so a save never fixes one field only to
-    // complain about the next.
-    if (missingTitle || missingTime) {
+    // All three are marked at once, so a save never fixes one problem only
+    // to find out about the next one on the next attempt.
+    if (missingTitle || missingTime || missingSteps) {
       setState(() {
         _titleInvalid = missingTitle;
         _timeInvalid = missingTime;
+        _stepsInvalid = missingSteps;
       });
-      return;
-    }
-
-    // No single field to redden for this one.
-    if (_routine && _steps.isEmpty) {
-      _toast('Add at least one step.');
       return;
     }
 
@@ -383,7 +397,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          if (_showIconHint) IconHint(onDismiss: _dismissIconHint),
+          if (_showIconHint)
+            HintCallout(
+              message: 'Tap the icon to change it',
+              onDismiss: _dismissIconHint,
+            ),
           const SizedBox(height: 18),
           ValuePill(
             icon: Symbols.schedule,
@@ -395,6 +413,13 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             invalid: _timeInvalid,
             onTap: _pickTime,
           ),
+          if (_showTimeHint)
+            HintCallout(
+              message: 'Time is the only thing that changes a reminder\'s '
+                  'place on the home screen',
+              onDismiss: _dismissTimeHint,
+              arrowInset: 34,
+            ),
           const SizedBox(height: 12),
           ValuePill(
             icon: Symbols.repeat,
@@ -447,37 +472,60 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                       fontSize: 15, color: AppColors.onSurfaceVariant),
                 ),
               )
-            else
-              Column(
-                children: [
-                  for (var i = 0; i < _steps.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 12),
-                    PillTile(
-                      label: _steps[i].title.isEmpty
-                          ? 'Untitled step'
-                          : _steps[i].title,
-                      iconKey: _steps[i].iconKey,
-                      onTap: () => _editStep(i),
-                      onIconTap: () => _pickStepIcon(i),
-                      trailing: _steps[i].hasTimer
-                          ? Text(
-                              formatDuration(
-                                  Duration(seconds: _steps[i].timerSeconds!)),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            )
-                          : null,
-                    ),
-                  ],
-                ],
+            else ...[
+              if (_steps.length > 1)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 10),
+                  child: Text(
+                    'Press and hold a step to reorder',
+                    style: TextStyle(
+                        fontSize: 13, color: AppColors.onSurfaceVariant),
+                  ),
+                ),
+              ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _steps.length,
+                onReorderItem: (oldIndex, newIndex) => setState(
+                  () => _steps = reorderSteps(_steps, oldIndex, newIndex),
+                ),
+                itemBuilder: (context, i) => Padding(
+                  // Keyed by identity, not index, so a dragged step keeps its
+                  // own row rather than swapping content with a neighbour.
+                  key: ObjectKey(_steps[i]),
+                  padding: EdgeInsets.only(bottom: i == _steps.length - 1 ? 0 : 12),
+                  child: PillTile(
+                    label: _steps[i].title.isEmpty
+                        ? 'Untitled step'
+                        : _steps[i].title,
+                    iconKey: _steps[i].iconKey,
+                    onTap: () => _editStep(i),
+                    onIconTap: () => _pickStepIcon(i),
+                    trailing: _steps[i].hasTimer
+                        ? Text(
+                            formatDuration(
+                                Duration(seconds: _steps[i].timerSeconds!)),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
               ),
+            ],
             const SizedBox(height: 20),
             Center(
               child: OutlinedButton.icon(
                 onPressed: _addStep,
+                style: _stepsInvalid
+                    ? OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: AppColors.error, width: 3),
+                      )
+                    : null,
                 icon: const Icon(Symbols.add, size: 24),
                 label: const Text('Add step'),
               ),

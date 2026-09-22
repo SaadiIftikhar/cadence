@@ -7,6 +7,7 @@ class AppPrefs {
 
   static const _seenOnboarding = 'seen_onboarding';
   static const _seenIconHint = 'seen_icon_hint';
+  static const _seenTimeHint = 'seen_time_hint';
 
   static Future<bool> seenOnboarding() async =>
       (await SharedPreferences.getInstance()).getBool(_seenOnboarding) ?? false;
@@ -24,4 +25,11 @@ class AppPrefs {
 
   static Future<void> markIconHintSeen() async =>
       (await SharedPreferences.getInstance()).setBool(_seenIconHint, true);
+
+  /// Whether the hint explaining that time decides the home order has run.
+  static Future<bool> seenTimeHint() async =>
+      (await SharedPreferences.getInstance()).getBool(_seenTimeHint) ?? false;
+
+  static Future<void> markTimeHintSeen() async =>
+      (await SharedPreferences.getInstance()).setBool(_seenTimeHint, true);
 }

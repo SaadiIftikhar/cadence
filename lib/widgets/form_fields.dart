@@ -78,8 +78,12 @@ class ValuePill extends StatelessWidget {
 }
 
 /// Human-readable summary of a weekday [mask]. Bit 0 is Monday.
+///
+/// An empty mask is a one-off reminder with no repeat. It is worded as
+/// "Today only" rather than the more literally exact "once" so it reads
+/// as a plain description of when it fires, not a warning about repeats.
 String describeDays(int mask) {
-  if (mask == 0) return 'Once';
+  if (mask == 0) return 'Today only';
   if (mask == 0x7F) return 'Every day';
   if (mask == 0x1F) return 'Weekdays';
   if (mask == 0x60) return 'Weekend';

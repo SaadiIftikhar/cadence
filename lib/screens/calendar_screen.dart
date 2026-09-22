@@ -24,11 +24,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focused = DateTime.now();
   DateTime _selected = DateTime.now();
 
-  static List<Reminder> _onDay(List<Reminder> all, DateTime day) {
-    final bit = 1 << (day.weekday - 1);
-    return all.where((r) => r.enabled && r.daysMask & bit != 0).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final reminders = ref.watch(remindersProvider);
@@ -41,7 +36,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         message: 'Restarting the app usually clears this.',
       ),
       data: (all) {
-        final forDay = _onDay(all, _selected);
+        final forDay = remindersOnDay(all, _selected);
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -51,7 +46,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               lastDay: DateTime.utc(2100),
               focusedDay: _focused,
               selectedDayPredicate: (d) => isSameDay(d, _selected),
-              eventLoader: (d) => _onDay(all, d),
+              eventLoader: (d) => remindersOnDay(all, d),
               startingDayOfWeek: StartingDayOfWeek.monday,
               onDaySelected: (selected, focused) => setState(() {
                 _selected = selected;

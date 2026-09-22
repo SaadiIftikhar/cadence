@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../theme/app_theme.dart';
-import 'cookie_timer.dart';
+import '../util/duration_format.dart';
 
 /// Collapsible hours/minutes/seconds picker for a step's countdown.
 /// A total of zero means the step has no timer.
