@@ -30,15 +30,19 @@ class RunStepScreen extends ConsumerStatefulWidget {
 }
 
 class _RunStepScreenState extends ConsumerState<RunStepScreen> {
+  /// The step on show, which finishing one replaces with the next rather than
+  /// opening a screen of its own — see [_advanceTo].
+  late ReminderStep _step = widget.step;
+
   Timer? _ticker;
   late Duration _remaining = _total;
   bool _running = false;
 
   /// Reopening a finished step should still look finished, so the tick starts
   /// green and Reset starts available.
-  late bool _completed = widget.step.completed;
+  late bool _completed = _step.completed;
 
-  Duration get _total => Duration(seconds: widget.step.timerSeconds ?? 0);
+  Duration get _total => Duration(seconds: _step.timerSeconds ?? 0);
   bool get _hasTimer => _total > Duration.zero;
   bool get _finished => _remaining <= Duration.zero;
 
@@ -86,7 +90,32 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   Future<void> _reset() async {
     _restartTimer();
     setState(() => _completed = false);
-    await ref.read(repositoryProvider).markStep(widget.step.id, false);
+    await ref.read(repositoryProvider).markStep(_step.id, false);
+  }
+
+  /// Puts [step] on screen, with its timer back at the start.
+  ///
+  /// Only the middle of the screen changes: the back button and the
+  /// Reset/Done row sit in the same place for every step, so sliding them
+  /// along with the content would be motion that says nothing. They stay put
+  /// and pick up the new step's state instead.
+  void _showStep(ReminderStep step) {
+    _ticker?.cancel();
+    setState(() {
+      _step = step;
+      _remaining = Duration(seconds: step.timerSeconds ?? 0);
+      _running = false;
+      _completed = step.completed;
+    });
+  }
+
+  @override
+  void didUpdateWidget(RunStepScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A step can also change from outside: a reminder that is just the one
+    // step rebuilds this screen straight from the live query, so the screen
+    // has to follow the row rather than keep showing whatever it opened with.
+    if (widget.step != oldWidget.step) _showStep(widget.step);
   }
 
   /// Marks the step done, then moves straight to whatever comes next in the
@@ -98,18 +127,16 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   Future<void> _done() async {
     setState(() => _completed = true);
     final repo = ref.read(repositoryProvider);
-    await repo.markStep(widget.step.id, true);
+    await repo.markStep(_step.id, true);
     if (!mounted) return;
 
     final reminderId = widget.reminderId;
     if (reminderId != null) {
       final steps = await ref.read(databaseProvider).stepsFor(reminderId);
-      final next = nextIncompleteStep(steps, widget.step.id);
+      final next = nextIncompleteStep(steps, _step.id);
       if (next != null) {
         if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          _riseIntoPlace(RunStepScreen(step: next, reminderId: reminderId)),
-        );
+        _showStep(next);
         return;
       }
     }
@@ -117,10 +144,52 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
     if (mounted) Navigator.pop(context, true);
   }
 
+  /// The part of the screen that belongs to one particular step, and so is
+  /// the only part that changes when the next one arrives.
+  Widget _stepContent(String title) {
+    return Column(
+      key: ValueKey(_step.id),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _StepHeading(iconKey: _step.iconKey, title: title),
+        if (_hasTimer) ...[
+          // Sets how far the controls sit below the heading. The block stays
+          // centred as a whole, so widening this drops the controls by half
+          // of what is added.
+          const SizedBox(height: 76),
+          // A step that is already done has nothing left to time, so the
+          // whole row goes inert until Reset puts the step back to
+          // unfinished.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _CircleControl(
+                icon: _running ? Symbols.pause : Symbols.play_arrow,
+                label: _running ? 'Pause' : 'Start',
+                onTap: _completed ? null : (_running ? _pause : _start),
+              ),
+              const SizedBox(width: 20),
+              TimerPill(
+                remaining: _remaining,
+                total: _total,
+                enabled: !_completed,
+              ),
+              const SizedBox(width: 20),
+              _CircleControl(
+                icon: Symbols.restart_alt,
+                label: 'Back to full time',
+                onTap: _completed ? null : _restartTimer,
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final title =
-        widget.step.title.trim().isEmpty ? 'Step' : widget.step.title.trim();
+    final title = _step.title.trim().isEmpty ? 'Step' : _step.title.trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -143,45 +212,28 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                 // sitting a little below the heading and a little above the
                 // Reset/Done row even when the content nearly fills the space.
                 padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _StepHeading(iconKey: widget.step.iconKey, title: title),
-                    if (_hasTimer) ...[
-                      // Sets how far the controls sit below the heading. The
-                      // block stays centred as a whole, so widening this drops
-                      // the controls by half of what is added.
-                      const SizedBox(height: 76),
-                      // A step that is already done has nothing left to time,
-                      // so the whole row goes inert until Reset puts the step
-                      // back to unfinished.
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _CircleControl(
-                            icon:
-                                _running ? Symbols.pause : Symbols.play_arrow,
-                            label: _running ? 'Pause' : 'Start',
-                            onTap: _completed
-                                ? null
-                                : (_running ? _pause : _start),
-                          ),
-                          const SizedBox(width: 20),
-                          TimerPill(
-                            remaining: _remaining,
-                            total: _total,
-                            enabled: !_completed,
-                          ),
-                          const SizedBox(width: 20),
-                          _CircleControl(
-                            icon: Symbols.restart_alt,
-                            label: 'Back to full time',
-                            onTap: _completed ? null : _restartTimer,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+                child: AnimatedSwitcher(
+                  duration: AppMotion.medium,
+                  switchInCurve: AppMotion.curve,
+                  switchOutCurve: AppMotion.curve,
+                  transitionBuilder: (child, animation) {
+                    // Only the step arriving travels; the one being replaced
+                    // stays where it is and fades, so the two do not slide
+                    // past each other in opposite directions.
+                    final arriving = child.key == ValueKey(_step.id);
+                    final faded =
+                        FadeTransition(opacity: animation, child: child);
+                    if (!arriving) return faded;
+
+                    return SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.35),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: faded,
+                    );
+                  },
+                  child: _stepContent(title),
                 ),
               ),
             ),
@@ -225,21 +277,6 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
     );
   }
 }
-
-/// Brings [page] up over the step just finished, rather than the platform's
-/// default screen change. Finishing a step is movement through one routine,
-/// not arrival somewhere new, and a rise from below reads that way.
-Route<void> _riseIntoPlace(Widget page) => PageRouteBuilder<void>(
-      transitionDuration: AppMotion.medium,
-      reverseTransitionDuration: AppMotion.medium,
-      pageBuilder: (_, _, _) => page,
-      transitionsBuilder: (_, animation, _, child) => SlideTransition(
-        position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
-          CurvedAnimation(parent: animation, curve: AppMotion.curve),
-        ),
-        child: child,
-      ),
-    );
 
 /// The step's own icon with its name beneath, always at the same size and
 /// position whether or not the step has a timer.

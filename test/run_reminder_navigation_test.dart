@@ -180,9 +180,10 @@ void main() {
     await settle(tester);
     expect(find.text('Stretch'), findsOneWidget);
 
-    // The auto-advance replaced the route, so back from Stretch goes to the
-    // list directly, not back to the now-finished Water screen. Only Water
-    // was ever marked done here — landing on Stretch is not finishing it.
+    // Advancing swapped the screen's contents rather than opening a second
+    // screen, so back from Stretch goes to the list directly and not to the
+    // now-finished Water. Only Water was ever marked done here — landing on
+    // Stretch is not finishing it.
     await tester.tap(find.byIcon(Symbols.arrow_back));
     await settle(tester);
 
