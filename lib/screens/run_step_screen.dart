@@ -202,7 +202,12 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _done,
+                      // Nothing left to do once it is done, so the button
+                      // stops responding until Reset. The tick keeps its
+                      // green — an explicit colour survives the disabled
+                      // styling — so the button reads as "already done"
+                      // rather than as simply unavailable.
+                      onPressed: _completed ? null : _done,
                       icon: Icon(
                         Symbols.done_all,
                         size: 24,

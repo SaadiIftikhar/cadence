@@ -221,15 +221,21 @@ class RunReminderScreen extends ConsumerWidget {
                       // Confirmed, because Done here ticks off steps the user
                       // may not have run, and the wording is what teaches that
                       // going back is the way to leave progress alone.
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        final confirmed = await _confirmDone(context);
-                        if (!confirmed) return;
-                        await ref
-                            .read(repositoryProvider)
-                            .setAllCompleted(reminderId, true);
-                        navigator.pop();
-                      },
+                      //
+                      // Once every step is ticked there is nothing left for it
+                      // to do, so it goes quiet until Reset, keeping its green
+                      // tick to say why.
+                      onPressed: allDone
+                          ? null
+                          : () async {
+                              final navigator = Navigator.of(context);
+                              final confirmed = await _confirmDone(context);
+                              if (!confirmed) return;
+                              await ref
+                                  .read(repositoryProvider)
+                                  .setAllCompleted(reminderId, true);
+                              navigator.pop();
+                            },
                       icon: Icon(
                         Symbols.done_all,
                         size: 24,

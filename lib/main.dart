@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'data/app_prefs.dart';
 import 'data/providers.dart';
+import 'screens/alarm_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/run_reminder_screen.dart';
@@ -52,7 +53,9 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
 
     NotificationService.instance.launchReminderId
         .addListener(_openLaunchedReminder);
+    NotificationService.instance.ringingAlarmId.addListener(_openRingingAlarm);
     _openLaunchedReminder();
+    _openRingingAlarm();
   }
 
   Future<void> _finishOnboarding({required bool allowNotifications}) async {
@@ -70,7 +73,26 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
   void dispose() {
     NotificationService.instance.launchReminderId
         .removeListener(_openLaunchedReminder);
+    NotificationService.instance.ringingAlarmId
+        .removeListener(_openRingingAlarm);
     super.dispose();
+  }
+
+  void _openRingingAlarm() {
+    final id = NotificationService.instance.ringingAlarmId.value;
+    if (id == null) return;
+    NotificationService.instance.ringingAlarmId.value = null;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => AlarmScreen(reminderId: id),
+          // It arrived over whatever was on screen, so it leaves the same way
+          // rather than sliding in as somewhere the user navigated to.
+          fullscreenDialog: true,
+        ),
+      );
+    });
   }
 
   void _openLaunchedReminder() {

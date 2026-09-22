@@ -8,7 +8,9 @@ import 'package:step_reminder/data/providers.dart';
 import 'package:step_reminder/screens/calendar_screen.dart';
 import 'package:step_reminder/screens/edit_reminder_screen.dart';
 import 'package:step_reminder/screens/edit_step_screen.dart';
+import 'package:step_reminder/screens/home_screen.dart';
 import 'package:step_reminder/screens/run_step_screen.dart';
+import 'package:step_reminder/services/notification_service.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 import 'package:step_reminder/util/duration_format.dart';
 import 'package:step_reminder/util/icon_catalog.dart';
@@ -435,6 +437,36 @@ void main() {
       expect(tester.widget<TimerPill>(find.byType(TimerPill)).enabled, isFalse);
     });
 
+    testWidgets('Done goes quiet once the step is done, tick still green',
+        (tester) async {
+      await pumpTimed(tester, timerSeconds: 120, completed: true);
+
+      final done = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Done'),
+      );
+      expect(done.onPressed, isNull);
+
+      // Disabled, but still saying why: an explicit colour is not overridden
+      // by the button's disabled styling.
+      final tick = tester.widget<Icon>(
+        find.descendant(
+          of: find.widgetWithText(OutlinedButton, 'Done'),
+          matching: find.byIcon(Symbols.done_all),
+        ),
+      );
+      expect(tick.color, AppColors.success);
+    });
+
+    testWidgets('Done stays available while the step is unfinished',
+        (tester) async {
+      await pumpTimed(tester, timerSeconds: 120);
+
+      final done = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Done'),
+      );
+      expect(done.onPressed, isNotNull);
+    });
+
     testWidgets('a finished step will not start counting down', (tester) async {
       await pumpTimed(tester, timerSeconds: 120, completed: true);
       expect(find.text('02:00'), findsOneWidget);
@@ -782,6 +814,131 @@ void main() {
         2: StepProgress(total: 0, done: 0),
       };
       expect(idsOf(list, progress), [2, 1]);
+    });
+  });
+
+  group('Home shell back navigation', () {
+    Future<void> pumpShell(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            remindersProvider.overrideWith((ref) => Stream.value(<Reminder>[])),
+            stepProgressProvider
+                .overrideWith((ref) => Stream.value(<int, StepProgress>{})),
+          ],
+          child: MaterialApp(theme: buildAppTheme(), home: const HomeShell()),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// What Android's back gesture does, as the framework delivers it.
+    Future<void> pressBack(WidgetTester tester) async {
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('back from another tab returns to Home before leaving',
+        (tester) async {
+      await pumpShell(tester);
+
+      await tester.tap(find.text('Calendar'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CalendarScreen), findsOneWidget);
+
+      await pressBack(tester);
+
+      // Home again, and still running: the app did not take the back press
+      // as its cue to leave.
+      expect(find.text('No reminders yet'), findsOneWidget);
+    });
+
+    testWidgets('back from Settings returns to Home too', (tester) async {
+      await pumpShell(tester);
+
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+
+      await pressBack(tester);
+
+      expect(find.text('No reminders yet'), findsOneWidget);
+    });
+
+    testWidgets('the shell only intercepts back while away from Home',
+        (tester) async {
+      await pumpShell(tester);
+
+      bool intercepting() {
+        final scope = tester
+            .widgetList(
+              find.descendant(
+                of: find.byType(HomeShell),
+                // Matched by predicate rather than by type: PopScope is
+                // generic, so byType would be looking for a different one.
+                matching: find.byWidgetPredicate((w) => w is PopScope),
+              ),
+            )
+            .first as PopScope;
+        return !scope.canPop;
+      }
+
+      // On Home there is nothing to fall back to, so the press stops being
+      // the app's business and becomes Android's.
+      expect(intercepting(), isFalse);
+
+      await tester.tap(find.text('Calendar'));
+      await tester.pumpAndSettle();
+      expect(intercepting(), isTrue);
+    });
+  });
+
+  group('Notification payloads', () {
+    Reminder reminder({required bool alarmEnabled, int id = 7}) => Reminder(
+          id: id,
+          title: 'Wake up',
+          iconKey: 'alarm',
+          hour: 7,
+          minute: 0,
+          daysMask: 0,
+          notificationsEnabled: true,
+          alarmEnabled: alarmEnabled,
+          multiStep: false,
+          enabled: true,
+          createdAt: DateTime(2026),
+        );
+
+    test('an alarm is tagged so a tap can tell it apart', () {
+      final target =
+          parseNotificationPayload(payloadFor(reminder(alarmEnabled: true)));
+      expect(target!.reminderId, 7);
+      expect(target.isAlarm, isTrue);
+    });
+
+    test('an ordinary reminder round-trips as itself', () {
+      final target =
+          parseNotificationPayload(payloadFor(reminder(alarmEnabled: false)));
+      expect(target!.reminderId, 7);
+      expect(target.isAlarm, isFalse);
+    });
+
+    test('a bare id from an older version still opens its reminder', () {
+      // Notifications scheduled before alarms were tagged are still out there
+      // on people's phones, and must not be dropped on the floor.
+      final target = parseNotificationPayload('12');
+      expect(target!.reminderId, 12);
+      expect(target.isAlarm, isFalse);
+    });
+
+    test('nothing readable yields nothing rather than throwing', () {
+      expect(parseNotificationPayload(null), isNull);
+      expect(parseNotificationPayload(''), isNull);
+      expect(parseNotificationPayload('not-an-id'), isNull);
+      expect(parseNotificationPayload('alarm:'), isNull);
     });
   });
 

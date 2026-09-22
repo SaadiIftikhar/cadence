@@ -408,8 +408,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ),
           if (_showTimeHint)
             HintCallout(
-              message: 'Time is the only thing that changes a reminder\'s '
-                  'place on the home screen',
+              message: 'Where a card sits on the home screen depends on '
+                  'its time',
               onDismiss: _dismissTimeHint,
               arrowInset: 34,
             ),

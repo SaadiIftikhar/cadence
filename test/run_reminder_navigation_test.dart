@@ -235,6 +235,28 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('Done goes quiet once every step is ticked off', (tester) async {
+    final id = await addRoutine(['Water', 'Stretch']);
+    final steps = await db.stepsFor(id);
+    await db.setStepCompleted(steps[0].id, true);
+    await pump(tester, id);
+
+    OutlinedButton doneButton() => tester.widget<OutlinedButton>(
+          find.widgetWithText(OutlinedButton, 'Done'),
+        );
+
+    // Still something left to do, so Done still has a job.
+    expect(doneButton().onPressed, isNotNull);
+
+    await db.setStepCompleted(steps[1].id, true);
+    await settle(tester);
+
+    expect(find.text('2 of 2 done'), findsOneWidget);
+    expect(doneButton().onPressed, isNull);
+
+    await finish(tester);
+  });
+
   testWidgets('Reset is disabled when nothing has been done yet',
       (tester) async {
     final id = await addRoutine(['Water', 'Stretch']);

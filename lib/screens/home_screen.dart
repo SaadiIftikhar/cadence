@@ -61,32 +61,42 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          index: _index,
-          children: const [
-            ReminderListView(),
-            CalendarScreen(),
-            SettingsScreen(),
-          ],
+    return PopScope(
+      // Back off a tab goes home first and only leaves the app from there,
+      // so the way out is never one stray tap away from wherever you are.
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        setState(() => _index = 0);
+      },
+      child: Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: IndexedStack(
+            index: _index,
+            children: const [
+              ReminderListView(),
+              CalendarScreen(),
+              SettingsScreen(),
+            ],
+          ),
         ),
+        floatingActionButton: _index == 0
+            ? FloatingActionButton(
+                key: _fabKey,
+                onPressed: _showAddMenu,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.onPrimary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Symbols.add, size: 30, semanticLabel: 'Add'),
+              )
+            : null,
+        bottomNavigationBar:
+            _BottomBar(index: _index, onSelected: _onDestination),
       ),
-      floatingActionButton: _index == 0
-          ? FloatingActionButton(
-              key: _fabKey,
-              onPressed: _showAddMenu,
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(Symbols.add, size: 30, semanticLabel: 'Add'),
-            )
-          : null,
-      bottomNavigationBar: _BottomBar(index: _index, onSelected: _onDestination),
     );
   }
 }

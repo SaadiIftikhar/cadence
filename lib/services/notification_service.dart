@@ -1,10 +1,39 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../data/database.dart';
+
+/// Alarm payloads are tagged, so a tap can be told apart from an ordinary
+/// reminder's without going back to the database to ask.
+const _alarmPrefix = 'alarm:';
+
+/// What a notification carries: which reminder it is for, and whether it
+/// arrived as an alarm that has to be dismissed rather than merely opened.
+class NotificationTarget {
+  const NotificationTarget(this.reminderId, {required this.isAlarm});
+
+  final int reminderId;
+  final bool isAlarm;
+}
+
+String payloadFor(Reminder reminder) =>
+    reminder.alarmEnabled ? '$_alarmPrefix${reminder.id}' : '${reminder.id}';
+
+/// The other half of [payloadFor]. Null for anything unreadable, including
+/// the untagged payloads written by older versions, which is why a bare
+/// number still parses as an ordinary reminder.
+NotificationTarget? parseNotificationPayload(String? payload) {
+  if (payload == null) return null;
+  final isAlarm = payload.startsWith(_alarmPrefix);
+  final id = int.tryParse(
+    isAlarm ? payload.substring(_alarmPrefix.length) : payload,
+  );
+  return id == null ? null : NotificationTarget(id, isAlarm: isAlarm);
+}
 
 /// Schedules the two flavours of reminder the designs call for.
 ///
@@ -40,7 +69,60 @@ class NotificationService {
   /// the reminder that fired.
   final ValueNotifier<int?> launchReminderId = ValueNotifier(null);
 
+  /// Set instead of [launchReminderId] when the notification was an alarm, so
+  /// the app opens the alarm screen and the ringing has to be dealt with
+  /// rather than stopping the moment the phone is unlocked.
+  final ValueNotifier<int?> ringingAlarmId = ValueNotifier(null);
+
+  static const _lockScreen = MethodChannel('step_reminder/alarm');
+
   bool _ready = false;
+
+  /// Null anywhere there is no Android plugin registered to answer — another
+  /// platform, or a test. Every caller already has to cope with that, so the
+  /// lookup failing outright is not worth telling them apart from it.
+  AndroidFlutterLocalNotificationsPlugin? get _android {
+    try {
+      return _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _routePayload(String? rawPayload) {
+    final target = parseNotificationPayload(rawPayload);
+    if (target == null) return;
+    if (target.isAlarm) {
+      ringingAlarmId.value = target.reminderId;
+    } else {
+      launchReminderId.value = target.reminderId;
+    }
+  }
+
+  /// Lets the alarm screen show over the keyguard and wake the screen, for as
+  /// long as it is up. Silently does nothing where the channel is not
+  /// implemented, which includes tests.
+  Future<void> takeOverLockScreen() async {
+    try {
+      await _lockScreen.invokeMethod<void>('show');
+    } catch (_) {}
+  }
+
+  Future<void> releaseLockScreen() async {
+    try {
+      await _lockScreen.invokeMethod<void>('release');
+    } catch (_) {}
+  }
+
+  /// Stops a ringing alarm. Cancelling the notification is what silences it,
+  /// since the sound repeats for as long as it is posted — so a repeating
+  /// alarm is armed again straight afterwards, while a one-off is not: its
+  /// day is done.
+  Future<void> dismissAlarm(Reminder reminder) async {
+    await cancelReminder(reminder.id);
+    if (reminder.daysMask != 0) await scheduleReminder(reminder);
+  }
 
   Future<void> init() async {
     if (_ready) return;
@@ -57,14 +139,11 @@ class NotificationService {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
-      onDidReceiveNotificationResponse: (response) {
-        final payload = response.payload;
-        if (payload != null) launchReminderId.value = int.tryParse(payload);
-      },
+      onDidReceiveNotificationResponse: (response) =>
+          _routePayload(response.payload),
     );
 
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _android;
 
     await android?.createNotificationChannel(
       const AndroidNotificationChannel(
@@ -94,17 +173,15 @@ class NotificationService {
     );
 
     final launch = await _plugin.getNotificationAppLaunchDetails();
-    final payload = launch?.notificationResponse?.payload;
-    if (launch?.didNotificationLaunchApp == true && payload != null) {
-      launchReminderId.value = int.tryParse(payload);
+    if (launch?.didNotificationLaunchApp == true) {
+      _routePayload(launch?.notificationResponse?.payload);
     }
 
     _ready = true;
   }
 
   Future<PermissionStatus> requestPermissions() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _android;
     if (android == null) return const PermissionStatus(true, true);
 
     final notifications = await android.requestNotificationsPermission() ?? false;
@@ -119,8 +196,7 @@ class NotificationService {
 
   /// What is granted right now, without prompting for anything.
   Future<PermissionStatus> currentStatus() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _android;
     if (android == null) return const PermissionStatus(true, true);
 
     return PermissionStatus(
@@ -133,8 +209,7 @@ class NotificationService {
   /// do. Deliberately leaves exact alarms alone: that request opens a system
   /// settings page, which would be hostile to throw at someone unprompted.
   Future<void> requestNotificationsIfUndecided() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _android;
     if (android == null) return;
 
     if (await android.areNotificationsEnabled() ?? false) return;
@@ -142,8 +217,7 @@ class NotificationService {
   }
 
   Future<bool> canScheduleExact() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _android;
     return await android?.canScheduleExactNotifications() ?? true;
   }
 
@@ -168,9 +242,12 @@ class NotificationService {
         additionalFlags: isAlarm ? _insistent : null,
         playSound: true,
         enableVibration: true,
-        // Tapping it opens the reminder and stops the ringing. Not ongoing,
-        // so it can still be swiped away.
-        autoCancel: true,
+        // A reminder is done with once tapped. An alarm is not: tapping it
+        // opens the alarm screen while it carries on ringing, and only
+        // Dismiss there stops it — otherwise unlocking the phone to look at
+        // the notification would be enough to silence an alarm. It stays
+        // swipeable either way, so there is always a way out of the noise.
+        autoCancel: !isAlarm,
         visibility: NotificationVisibility.public,
       ),
     );
@@ -196,6 +273,7 @@ class NotificationService {
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
     final base = reminder.id * _slotsPerReminder;
+    final payload = payloadFor(reminder);
 
     if (reminder.daysMask == 0) {
       await _plugin.zonedSchedule(
@@ -205,7 +283,7 @@ class NotificationService {
         scheduledDate: _nextOneShot(reminder.hour, reminder.minute),
         notificationDetails: details,
         androidScheduleMode: mode,
-        payload: '${reminder.id}',
+        payload: payload,
       );
       return;
     }
@@ -220,7 +298,7 @@ class NotificationService {
         notificationDetails: details,
         androidScheduleMode: mode,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-        payload: '${reminder.id}',
+        payload: payload,
       );
     }
   }
