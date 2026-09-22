@@ -23,10 +23,16 @@ class TimerPill extends StatelessWidget {
     super.key,
     required this.remaining,
     required this.total,
+    this.enabled = true,
   });
 
   final Duration remaining;
   final Duration total;
+
+  /// A finished step's clock is inert: the ring drops its green and the
+  /// number dims, so it reads as switched off alongside the controls beside
+  /// it rather than as a timer waiting to be started.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +44,7 @@ class TimerPill extends StatelessWidget {
       duration: const Duration(seconds: 1),
       curve: Curves.linear,
       builder: (context, value, child) => CustomPaint(
-        foregroundPainter: _TimerRingPainter(fraction: value),
+        foregroundPainter: _TimerRingPainter(fraction: value, enabled: enabled),
         child: child,
       ),
       child: Container(
@@ -47,11 +53,13 @@ class TimerPill extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           formatDuration(remaining),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.w600,
-            color: AppColors.onSurface,
-            fontFeatures: [FontFeature.tabularFigures()],
+            color: enabled
+                ? AppColors.onSurface
+                : AppColors.onSurfaceVariant.withValues(alpha: 0.6),
+            fontFeatures: const [FontFeature.tabularFigures()],
             letterSpacing: -0.5,
           ),
         ),
@@ -61,10 +69,12 @@ class TimerPill extends StatelessWidget {
 }
 
 class _TimerRingPainter extends CustomPainter {
-  _TimerRingPainter({required this.fraction});
+  _TimerRingPainter({required this.fraction, required this.enabled});
 
   /// 1 at the timer's full length, 0 once it has run out.
   final double fraction;
+
+  final bool enabled;
 
   static const _stroke = SegmentedProgressBorder.strokeWidth;
 
@@ -85,10 +95,10 @@ class _TimerRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..isAntiAlias = true;
 
-    paint.color = AppColors.outline;
+    paint.color = enabled ? AppColors.outline : AppColors.outlineDim;
     canvas.drawPath(path, paint);
 
-    if (fraction <= 0) return;
+    if (!enabled || fraction <= 0) return;
     paint.color = AppColors.timerRing;
     final lit = fraction >= 1
         ? path
@@ -98,5 +108,5 @@ class _TimerRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _TimerRingPainter old) =>
-      old.fraction != fraction;
+      old.fraction != fraction || old.enabled != enabled;
 }

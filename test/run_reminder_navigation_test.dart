@@ -9,6 +9,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/data/providers.dart';
 import 'package:step_reminder/screens/run_reminder_screen.dart';
+import 'package:step_reminder/screens/run_step_screen.dart';
 import 'package:step_reminder/theme/app_theme.dart';
 
 /// Exercises the routine run screen against a real database, so Done's
@@ -118,6 +119,34 @@ void main() {
     // Landed on Stretch, not back at the routine list and not stuck on Water.
     expect(find.text('Stretch'), findsOneWidget);
     expect(find.text('Water'), findsNothing);
+
+    await finish(tester);
+  });
+
+  testWidgets('the next step rises into place from below', (tester) async {
+    final id = await addRoutine(['Water', 'Stretch']);
+    await pump(tester, id);
+
+    await tester.tap(find.text('Water'));
+    await settle(tester);
+    await tester.tap(find.text('Done'));
+
+    // Scoped to the step screen: the routine list underneath names both
+    // steps too, so a bare text finder could measure the wrong widget.
+    final heading = find.descendant(
+      of: find.byType(RunStepScreen),
+      matching: find.text('Stretch'),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    final entering = tester.getTopLeft(heading).dy;
+
+    await settle(tester);
+    final landed = tester.getTopLeft(heading).dy;
+
+    // Well beyond the few pixels a scale or fade would shift it by.
+    expect(entering - landed, greaterThan(50));
 
     await finish(tester);
   });

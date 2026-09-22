@@ -292,6 +292,20 @@ void main() {
       await pumpPill(tester, remaining: Duration.zero, total: Duration.zero);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('a ring put back to full sweeps there instead of snapping',
+        (tester) async {
+      const total = Duration(minutes: 2);
+      await pumpPill(tester, remaining: const Duration(seconds: 10), total: total);
+      await tester.pump(const Duration(seconds: 1));
+
+      // What a reset does: the time jumps back to full, and the ring has to
+      // travel to meet it rather than arrive there on the next frame.
+      await pumpPill(tester, remaining: total, total: total);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.binding.hasScheduledFrame, isTrue);
+    });
   });
 
   group('timerRingFraction', () {
@@ -332,7 +346,11 @@ void main() {
   });
 
   group('Run step screen', () {
-    Future<void> pumpTimed(WidgetTester tester, {int? timerSeconds}) async {
+    Future<void> pumpTimed(
+      WidgetTester tester, {
+      int? timerSeconds,
+      bool completed = false,
+    }) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -345,13 +363,20 @@ void main() {
                 iconKey: 'alarm',
                 timerSeconds: timerSeconds,
                 position: 0,
-                completed: false,
+                completed: completed,
               ),
             ),
           ),
         ),
       );
       await tester.pump();
+    }
+
+    bool controlIsLive(WidgetTester tester, IconData icon) {
+      final ink = tester.widget<InkWell>(
+        find.ancestor(of: find.byIcon(icon), matching: find.byType(InkWell)),
+      );
+      return ink.onTap != null;
     }
 
     testWidgets('both kinds of step lead with the icon and name',
@@ -389,6 +414,34 @@ void main() {
       final withTimer = headingIconSize(tester);
 
       expect(withTimer, withoutTimer);
+    });
+
+    testWidgets('a step still to do keeps its timer controls live',
+        (tester) async {
+      await pumpTimed(tester, timerSeconds: 120);
+
+      expect(controlIsLive(tester, Symbols.play_arrow), isTrue);
+      expect(controlIsLive(tester, Symbols.restart_alt), isTrue);
+      expect(tester.widget<TimerPill>(find.byType(TimerPill)).enabled, isTrue);
+    });
+
+    testWidgets('a step already done has its whole timer row switched off',
+        (tester) async {
+      await pumpTimed(tester, timerSeconds: 120, completed: true);
+
+      expect(controlIsLive(tester, Symbols.play_arrow), isFalse);
+      expect(controlIsLive(tester, Symbols.restart_alt), isFalse);
+      expect(tester.widget<TimerPill>(find.byType(TimerPill)).enabled, isFalse);
+    });
+
+    testWidgets('a finished step will not start counting down', (tester) async {
+      await pumpTimed(tester, timerSeconds: 120, completed: true);
+      expect(find.text('02:00'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Start'), warnIfMissed: false);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('02:00'), findsOneWidget);
     });
 
     testWidgets('a timer runs down to zero and stops', (tester) async {

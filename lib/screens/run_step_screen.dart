@@ -108,10 +108,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
       if (next != null) {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) =>
-                RunStepScreen(step: next, reminderId: reminderId),
-          ),
+          _riseIntoPlace(RunStepScreen(step: next, reminderId: reminderId)),
         );
         return;
       }
@@ -155,6 +152,9 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                       // block stays centred as a whole, so widening this drops
                       // the controls by half of what is added.
                       const SizedBox(height: 76),
+                      // A step that is already done has nothing left to time,
+                      // so the whole row goes inert until Reset puts the step
+                      // back to unfinished.
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -162,15 +162,21 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                             icon:
                                 _running ? Symbols.pause : Symbols.play_arrow,
                             label: _running ? 'Pause' : 'Start',
-                            onTap: _running ? _pause : _start,
+                            onTap: _completed
+                                ? null
+                                : (_running ? _pause : _start),
                           ),
                           const SizedBox(width: 20),
-                          TimerPill(remaining: _remaining, total: _total),
+                          TimerPill(
+                            remaining: _remaining,
+                            total: _total,
+                            enabled: !_completed,
+                          ),
                           const SizedBox(width: 20),
                           _CircleControl(
                             icon: Symbols.restart_alt,
                             label: 'Back to full time',
-                            onTap: _restartTimer,
+                            onTap: _completed ? null : _restartTimer,
                           ),
                         ],
                       ),
@@ -214,6 +220,21 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
     );
   }
 }
+
+/// Brings [page] up over the step just finished, rather than the platform's
+/// default screen change. Finishing a step is movement through one routine,
+/// not arrival somewhere new, and a rise from below reads that way.
+Route<void> _riseIntoPlace(Widget page) => PageRouteBuilder<void>(
+      transitionDuration: AppMotion.medium,
+      reverseTransitionDuration: AppMotion.medium,
+      pageBuilder: (_, _, _) => page,
+      transitionsBuilder: (_, animation, _, child) => SlideTransition(
+        position: Tween(begin: const Offset(0, 1), end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: AppMotion.curve),
+        ),
+        child: child,
+      ),
+    );
 
 /// The step's own icon with its name beneath, always at the same size and
 /// position whether or not the step has a timer.
@@ -263,7 +284,9 @@ class _CircleControl extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+
+  /// Null greys the control out and stops it responding.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +301,9 @@ class _CircleControl extends StatelessWidget {
           child: Icon(
             icon,
             size: 40,
-            color: AppColors.onSurface,
+            color: onTap == null
+                ? AppColors.onSurfaceVariant.withValues(alpha: 0.6)
+                : AppColors.onSurface,
             semanticLabel: label,
           ),
         ),
