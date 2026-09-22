@@ -46,6 +46,11 @@ class AppColors {
   static const onSurfaceVariant = Color(0xFFCAC4D0);
   static const danger = Color(0xFFF2B8B5);
 
+  /// Louder than [danger], which is the muted tone Material uses for error
+  /// *text*. A missing field has to be findable at a glance on a near-black
+  /// screen, so the outline that marks one uses this instead.
+  static const error = Color(0xFFFF5449);
+
   /// Deliberately off-palette: completed steps need to read as done at a
   /// glance, which the lavender primary cannot do next to other lavender.
   static const success = Color(0xFF6EDC9B);

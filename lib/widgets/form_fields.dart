@@ -34,8 +34,8 @@ class ValuePill extends StatelessWidget {
       color: Colors.transparent,
       shape: StadiumBorder(
         side: BorderSide(
-          color: invalid ? AppColors.danger : AppColors.outline,
-          width: invalid ? 2 : 1,
+          color: invalid ? AppColors.error : AppColors.outline,
+          width: invalid ? 3 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,

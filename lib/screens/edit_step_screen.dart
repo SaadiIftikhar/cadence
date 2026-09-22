@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../data/app_prefs.dart';
 import '../data/providers.dart';
-import '../theme/app_theme.dart';
-import '../util/icon_catalog.dart';
-import '../widgets/pulse_highlight.dart';
+import '../widgets/icon_hint.dart';
+import '../widgets/tappable_icon.dart';
 import '../widgets/timer_picker.dart';
 import 'icon_picker_screen.dart';
 
@@ -34,13 +34,32 @@ class _EditStepScreenState extends State<EditStepScreen> {
   late String? _iconKey = widget.draft?.iconKey;
   late int _seconds = widget.draft?.timerSeconds ?? 0;
 
+  /// Shown once ever, and only if a reminder editor has not shown it already.
+  bool _showIconHint = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppPrefs.seenIconHint().then((seen) {
+      if (!seen && mounted) setState(() => _showIconHint = true);
+    });
+  }
+
   @override
   void dispose() {
     _title.dispose();
     super.dispose();
   }
 
+  void _dismissIconHint() {
+    if (!_showIconHint) return;
+    setState(() => _showIconHint = false);
+    AppPrefs.markIconHintSeen();
+  }
+
   Future<void> _pickIcon() async {
+    _dismissIconHint();
+
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
     );
@@ -89,34 +108,14 @@ class _EditStepScreenState extends State<EditStepScreen> {
               labelText: 'Step title',
               floatingLabelBehavior: FloatingLabelBehavior.always,
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 6),
-                child: PulseHighlight(
-                  active: _iconKey == null,
-                  child: IconButton(
-                    icon: Icon(
-                      IconCatalog.resolve(_iconKey),
-                      size: 28,
-                      semanticLabel: 'Choose icon',
-                    ),
-                    onPressed: _pickIcon,
-                  ),
-                ),
+                padding: const EdgeInsets.only(left: 12, right: 8),
+                child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          if (_iconKey == null) ...[
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Text(
-                'Tap the icon to choose one',
-                style: TextStyle(
-                    fontSize: 13, color: AppColors.onSurfaceVariant),
-              ),
-            ),
-          ],
+          if (_showIconHint) IconHint(onDismiss: _dismissIconHint),
           const SizedBox(height: 26),
           const Divider(),
           const SizedBox(height: 26),

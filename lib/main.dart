@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'data/app_prefs.dart';
 import 'data/providers.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -21,15 +21,12 @@ Future<void> main() async {
 
   await NotificationService.instance.init();
 
-  final prefs = await SharedPreferences.getInstance();
-  final seenOnboarding = prefs.getBool(_seenOnboardingKey) ?? false;
+  final seenOnboarding = await AppPrefs.seenOnboarding();
 
   runApp(
     ProviderScope(child: StepReminderApp(seenOnboarding: seenOnboarding)),
   );
 }
-
-const _seenOnboardingKey = 'seen_onboarding';
 
 class StepReminderApp extends ConsumerStatefulWidget {
   const StepReminderApp({super.key, required this.seenOnboarding});
@@ -62,9 +59,7 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
     // Swapping what `home` builds, rather than pushing, leaves no route to go
     // back to: once the user is home, back cannot return to the introduction.
     setState(() => _seenOnboarding = true);
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_seenOnboardingKey, true);
+    await AppPrefs.markOnboardingSeen();
 
     if (allowNotifications) {
       await NotificationService.instance.requestNotificationsIfUndecided();

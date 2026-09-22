@@ -11,7 +11,7 @@ import 'package:step_reminder/widgets/anchored_menu.dart';
 import 'package:step_reminder/widgets/cookie_timer.dart';
 import 'package:step_reminder/widgets/form_fields.dart';
 import 'package:step_reminder/widgets/pill_tile.dart';
-import 'package:step_reminder/widgets/pulse_highlight.dart';
+import 'package:step_reminder/widgets/icon_hint.dart';
 import 'package:step_reminder/widgets/segmented_border.dart';
 
 void main() {
@@ -225,31 +225,20 @@ void main() {
     });
   });
 
-  group('PulseHighlight', () {
-    testWidgets('shows the child either way and only animates when active',
-        (tester) async {
+  group('IconHint', () {
+    testWidgets('names the gesture and dismisses on Got it', (tester) async {
+      var dismissed = 0;
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PulseHighlight(active: false, child: Text('icon')),
-          ),
+        MaterialApp(
+          theme: buildAppTheme(),
+          home: Scaffold(body: IconHint(onDismiss: () => dismissed++)),
         ),
       );
-      expect(find.text('icon'), findsOneWidget);
-      // An inactive hint must not leave a repeating animation running, or the
-      // test framework would report pending timers here.
-      await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PulseHighlight(active: true, child: Text('icon')),
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('icon'), findsOneWidget);
-      expect(tester.takeException(), isNull);
+      expect(find.text('Tap the icon to change it'), findsOneWidget);
+      await tester.tap(find.text('Got it'));
+      await tester.pumpAndSettle();
+      expect(dismissed, 1);
     });
   });
 

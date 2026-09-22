@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import 'segmented_border.dart';
+import 'tappable_icon.dart';
 
 /// The stadium row used for steps and reminders throughout the designs.
 ///
@@ -76,19 +77,17 @@ class PillTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 22),
           child: Row(
             children: [
-              if (onIconTap == null)
-                Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground)
-              else
-                InkResponse(
-                  onTap: onIconTap,
-                  radius: 28,
-                  child: Icon(
-                    IconCatalog.resolve(iconKey),
-                    size: 26,
-                    color: foreground,
-                  ),
+              if (onIconTap == null) ...[
+                Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground),
+                const SizedBox(width: 22),
+              ] else ...[
+                TappableIcon(
+                  iconKey: iconKey,
+                  onTap: onIconTap!,
+                  semanticLabel: 'Change step icon',
                 ),
-              const SizedBox(width: 22),
+                const SizedBox(width: 14),
+              ],
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

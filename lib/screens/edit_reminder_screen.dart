@@ -8,14 +8,16 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../data/app_prefs.dart';
 import '../data/providers.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/cookie_timer.dart';
 import '../widgets/form_fields.dart';
+import '../widgets/icon_hint.dart';
 import '../widgets/pill_tile.dart';
-import '../widgets/pulse_highlight.dart';
+import '../widgets/tappable_icon.dart';
 import '../widgets/timer_picker.dart';
 import 'edit_step_screen.dart';
 import 'icon_picker_screen.dart';
@@ -66,9 +68,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   bool _titleInvalid = false;
   bool _timeInvalid = false;
 
-  /// The icon doubles as the button that changes it, which is not obvious, so
-  /// it is highlighted until the choice has actually been made once.
-  bool _iconChosen = false;
+  /// Shown once ever, the first time someone reaches an editor.
+  bool _showIconHint = false;
 
   bool get _isNew => widget.reminderId == null;
 
@@ -76,6 +77,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   void initState() {
     super.initState();
     _load();
+    AppPrefs.seenIconHint().then((seen) {
+      if (!seen && mounted) setState(() => _showIconHint = true);
+    });
   }
 
   @override
@@ -106,8 +110,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       _alarm = reminder.alarmEnabled;
       _imagePath = reminder.imagePath;
       _addImage = reminder.imagePath != null;
-      // An existing reminder already has whatever icon its owner wanted.
-      _iconChosen = true;
 
       if (_routine) {
         _title.text = reminder.title;
@@ -141,16 +143,20 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     if (picked != null) setState(() => _daysMask = picked);
   }
 
+  void _dismissIconHint() {
+    if (!_showIconHint) return;
+    setState(() => _showIconHint = false);
+    AppPrefs.markIconHintSeen();
+  }
+
   Future<void> _pickIcon() async {
+    // Tapping the icon is the thing the hint was there to teach.
+    _dismissIconHint();
+
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
     );
-    if (picked != null) {
-      setState(() {
-        _iconKey = picked;
-        _iconChosen = true;
-      });
-    }
+    if (picked != null) setState(() => _iconKey = picked);
   }
 
   /// Retargets an already-added step's icon without opening its whole editor.
@@ -308,10 +314,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Outline only — the label keeps its normal colour so nothing shouts.
+  /// Outline only, but an outline you cannot miss: a 1px muted red on a
+  /// near-black screen was easy to scroll straight past.
   static const _invalidBorder = OutlineInputBorder(
     borderRadius: BorderRadius.all(Radius.circular(40)),
-    borderSide: BorderSide(color: AppColors.danger, width: 2),
+    borderSide: BorderSide(color: AppColors.error, width: 3),
   );
 
   String get _screenTitle {
@@ -364,34 +371,14 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               enabledBorder: _titleInvalid ? _invalidBorder : null,
               focusedBorder: _titleInvalid ? _invalidBorder : null,
               prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 6),
-                child: PulseHighlight(
-                  active: !_iconChosen,
-                  child: IconButton(
-                    icon: Icon(
-                      IconCatalog.resolve(_iconKey),
-                      size: 28,
-                      semanticLabel: 'Choose icon',
-                    ),
-                    onPressed: _pickIcon,
-                  ),
-                ),
+                padding: const EdgeInsets.only(left: 12, right: 8),
+                child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
               ),
               prefixIconConstraints:
                   const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
-          if (!_iconChosen) ...[
-            const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.only(left: 24),
-              child: Text(
-                'Tap the icon to change it',
-                style: TextStyle(
-                    fontSize: 13, color: AppColors.onSurfaceVariant),
-              ),
-            ),
-          ],
+          if (_showIconHint) IconHint(onDismiss: _dismissIconHint),
           if (!_routine) ...[
             const SizedBox(height: 18),
             TimerPicker(
