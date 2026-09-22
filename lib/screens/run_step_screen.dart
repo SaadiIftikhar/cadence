@@ -147,43 +147,48 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   /// The part of the screen that belongs to one particular step, and so is
   /// the only part that changes when the next one arrives.
   Widget _stepContent(String title) {
-    return Column(
+    return SizedBox(
       key: ValueKey(_step.id),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _StepHeading(iconKey: _step.iconKey, title: title),
-        if (_hasTimer) ...[
-          // Sets how far the controls sit below the heading. The block stays
-          // centred as a whole, so widening this drops the controls by half
-          // of what is added.
-          const SizedBox(height: 76),
-          // A step that is already done has nothing left to time, so the
-          // whole row goes inert until Reset puts the step back to
-          // unfinished.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _CircleControl(
-                icon: _running ? Symbols.pause : Symbols.play_arrow,
-                label: _running ? 'Pause' : 'Start',
-                onTap: _completed ? null : (_running ? _pause : _start),
-              ),
-              const SizedBox(width: 20),
-              TimerPill(
-                remaining: _remaining,
-                total: _total,
-                enabled: !_completed,
-              ),
-              const SizedBox(width: 20),
-              _CircleControl(
-                icon: Symbols.restart_alt,
-                label: 'Back to full time',
-                onTap: _completed ? null : _restartTimer,
-              ),
-            ],
-          ),
+      // Full width so the slide below covers the same distance for every
+      // step, rather than a distance set by how long the step's name is.
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _StepHeading(iconKey: _step.iconKey, title: title),
+          if (_hasTimer) ...[
+            // Sets how far the controls sit below the heading. The block stays
+            // centred as a whole, so widening this drops the controls by half
+            // of what is added.
+            const SizedBox(height: 76),
+            // A step that is already done has nothing left to time, so the
+            // whole row goes inert until Reset puts the step back to
+            // unfinished.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CircleControl(
+                  icon: _running ? Symbols.pause : Symbols.play_arrow,
+                  label: _running ? 'Pause' : 'Start',
+                  onTap: _completed ? null : (_running ? _pause : _start),
+                ),
+                const SizedBox(width: 20),
+                TimerPill(
+                  remaining: _remaining,
+                  total: _total,
+                  enabled: !_completed,
+                ),
+                const SizedBox(width: 20),
+                _CircleControl(
+                  icon: Symbols.restart_alt,
+                  label: 'Back to full time',
+                  onTap: _completed ? null : _restartTimer,
+                ),
+              ],
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -225,9 +230,11 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                         FadeTransition(opacity: animation, child: child);
                     if (!arriving) return faded;
 
+                    // In from the right, the direction a list is read and so
+                    // the one that reads as going on to the next thing.
                     return SlideTransition(
                       position: Tween(
-                        begin: const Offset(0, 0.35),
+                        begin: const Offset(0.25, 0),
                         end: Offset.zero,
                       ).animate(animation),
                       child: faded,

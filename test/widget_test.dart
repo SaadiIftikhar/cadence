@@ -554,7 +554,7 @@ void main() {
     });
   });
 
-  group('Edit reminder screen validation', () {
+  group('Edit reminder screen', () {
     setUp(() {
       // initState reads AppPrefs (backed by shared_preferences) to decide
       // whether to show the one-time icon/time hints; without a mock store
@@ -628,6 +628,37 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(addStepBorder(tester), isNull);
+    });
+
+    testWidgets('coming back from adding a step leaves no field focused',
+        (tester) async {
+      await pumpNewRoutine(tester);
+
+      bool somethingFocused() => tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .any((field) => field.focusNode.hasFocus);
+
+      // Name the routine first, which is what puts the keyboard up.
+      await tester.tap(find.byType(TextField).first);
+      await tester.pumpAndSettle();
+      expect(somethingFocused(), isTrue);
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Add step'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(EditStepScreen),
+          matching: find.byType(TextField),
+        ),
+        'Stretch',
+      );
+      await tester.tap(find.bySemanticsLabel('Save step'));
+      await tester.pumpAndSettle();
+
+      // Back on the routine, with the step added and nothing asking for the
+      // keyboard: focus is not handed back to the field left behind.
+      expect(find.text('Stretch'), findsOneWidget);
+      expect(somethingFocused(), isFalse);
     });
   });
 

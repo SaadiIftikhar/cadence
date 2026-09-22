@@ -123,7 +123,7 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('the next step rises into place from below', (tester) async {
+  testWidgets('the next step slides in from the right', (tester) async {
     final id = await addRoutine(['Water', 'Stretch']);
     await pump(tester, id);
 
@@ -140,12 +140,13 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
-    final entering = tester.getTopLeft(heading).dy;
+    final entering = tester.getTopLeft(heading).dx;
 
     await settle(tester);
-    final landed = tester.getTopLeft(heading).dy;
+    final landed = tester.getTopLeft(heading).dx;
 
-    // Well beyond the few pixels a scale or fade would shift it by.
+    // Started to the right of where it settles, by well beyond the few pixels
+    // a scale or a fade would shift it.
     expect(entering - landed, greaterThan(50));
 
     await finish(tester);

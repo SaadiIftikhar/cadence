@@ -164,12 +164,17 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     AppPrefs.markTimeHintSeen();
   }
 
+  /// Closes the keyboard before leaving this screen, and — the reason it
+  /// matters on the way back — leaves nothing focused for Flutter to restore
+  /// when the pushed screen pops. Without it, typing a routine's name, going
+  /// off to add a step and saving lands you back here with the keyboard up
+  /// over a field you had finished with.
+  void _dropFocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   Future<void> _pickIcon() async {
     // Tapping the icon is the thing the hint was there to teach.
     _dismissIconHint();
-    // Dropped before leaving, or Flutter hands focus back to the name field on
-    // the way in and the keyboard reappears over the picker's results.
-    FocusManager.instance.primaryFocus?.unfocus();
+    _dropFocus();
 
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => IconPickerScreen(selected: _iconKey)),
@@ -179,7 +184,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
 
   /// Retargets an already-added step's icon without opening its whole editor.
   Future<void> _pickStepIcon(int index) async {
-    FocusManager.instance.primaryFocus?.unfocus();
+    _dropFocus();
     final picked = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => IconPickerScreen(selected: _steps[index].iconKey),
@@ -240,6 +245,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _addStep() async {
+    _dropFocus();
     final result = await Navigator.of(context).push<StepEditResult>(
       MaterialPageRoute(
         builder: (_) => const EditStepScreen(allowDelete: false),
@@ -253,6 +259,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _editStep(int index) async {
+    _dropFocus();
     final result = await Navigator.of(context).push<StepEditResult>(
       MaterialPageRoute(builder: (_) => EditStepScreen(draft: _steps[index])),
     );
@@ -269,7 +276,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _save() async {
-    FocusManager.instance.primaryFocus?.unfocus();
+    _dropFocus();
     final title = _title.text.trim();
     final missingTitle = title.isEmpty;
     final missingTime = _time == null;
