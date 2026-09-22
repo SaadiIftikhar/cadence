@@ -294,6 +294,43 @@ void main() {
     });
   });
 
+  group('timerRingFraction', () {
+    const total = Duration(minutes: 5);
+
+    test('a timer that has not started yet lights the whole ring', () {
+      expect(timerRingFraction(total, total), 1.0);
+    });
+
+    test('a finished timer lights none of it', () {
+      expect(timerRingFraction(Duration.zero, total), 0.0);
+    });
+
+    test('half the time left lights half the ring', () {
+      expect(timerRingFraction(const Duration(minutes: 2, seconds: 30), total),
+          0.5);
+    });
+
+    test('the ring drains rather than fills as time runs down', () {
+      // The direction is the whole point: each later reading must light less
+      // of the ring than the one before it.
+      final readings = [
+        for (final seconds in [300, 200, 100, 0])
+          timerRingFraction(Duration(seconds: seconds), total),
+      ];
+      for (var i = 1; i < readings.length; i++) {
+        expect(readings[i], lessThan(readings[i - 1]));
+      }
+    });
+
+    test('a step with no timer lights nothing instead of dividing by zero', () {
+      expect(timerRingFraction(Duration.zero, Duration.zero), 0.0);
+    });
+
+    test('more remaining than the total still stops at a full ring', () {
+      expect(timerRingFraction(const Duration(minutes: 9), total), 1.0);
+    });
+  });
+
   group('Run step screen', () {
     Future<void> pumpTimed(WidgetTester tester, {int? timerSeconds}) async {
       await tester.pumpWidget(

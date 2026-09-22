@@ -151,7 +151,10 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
                   children: [
                     _StepHeading(iconKey: widget.step.iconKey, title: title),
                     if (_hasTimer) ...[
-                      const SizedBox(height: 40),
+                      // Sets how far the controls sit below the heading. The
+                      // block stays centred as a whole, so widening this drops
+                      // the controls by half of what is added.
+                      const SizedBox(height: 76),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

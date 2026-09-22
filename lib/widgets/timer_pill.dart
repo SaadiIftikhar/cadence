@@ -4,9 +4,17 @@ import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 import 'segmented_border.dart';
 
-/// A step's countdown, drawn as a pill whose border fills with green as time
-/// elapses — the same visual language as a finished step's outline and a
-/// routine's segmented progress, rather than a shape of its own.
+/// How much of the ring is still lit: 1 at the timer's full length, 0 once it
+/// has run out. A total of zero is a step with no timer, which lights nothing.
+double timerRingFraction(Duration remaining, Duration total) {
+  final totalSeconds = total.inSeconds;
+  if (totalSeconds <= 0) return 0;
+  return (remaining.inSeconds / totalSeconds).clamp(0.0, 1.0);
+}
+
+/// A step's countdown, drawn as a pill whose border starts fully lit and
+/// drains away as the time runs down, so what is left on the ring is what is
+/// left on the clock.
 ///
 /// The border is one continuous ring, not segments: a single timer is one
 /// continuous quantity, unlike a routine's discrete steps.
@@ -22,13 +30,8 @@ class TimerPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalSeconds = total.inSeconds;
-    final fraction = totalSeconds <= 0
-        ? 0.0
-        : (1 - remaining.inSeconds / totalSeconds).clamp(0.0, 1.0);
-
     return TweenAnimationBuilder<double>(
-      tween: Tween(end: fraction),
+      tween: Tween(end: timerRingFraction(remaining, total)),
       // Matches the ticker's own one-second cadence rather than the app's
       // usual transition timings: the ring should visibly creep for the same
       // second the number just changed, not snap to the new value.
@@ -60,7 +63,7 @@ class TimerPill extends StatelessWidget {
 class _TimerRingPainter extends CustomPainter {
   _TimerRingPainter({required this.fraction});
 
-  /// 0 at the timer's full length, 1 once it has run out.
+  /// 1 at the timer's full length, 0 once it has run out.
   final double fraction;
 
   static const _stroke = SegmentedProgressBorder.strokeWidth;
@@ -86,11 +89,11 @@ class _TimerRingPainter extends CustomPainter {
     canvas.drawPath(path, paint);
 
     if (fraction <= 0) return;
-    paint.color = AppColors.success;
-    final filled = fraction >= 1
+    paint.color = AppColors.timerRing;
+    final lit = fraction >= 1
         ? path
         : metric.extractPath(0, metric.length * fraction);
-    canvas.drawPath(filled, paint);
+    canvas.drawPath(lit, paint);
   }
 
   @override

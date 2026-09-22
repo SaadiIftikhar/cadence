@@ -54,6 +54,12 @@ class AppColors {
   /// Deliberately off-palette: completed steps need to read as done at a
   /// glance, which the lavender primary cannot do next to other lavender.
   static const success = Color(0xFF6EDC9B);
+
+  /// The running countdown's own green. Saturated well past [success]
+  /// because it marks the one thing on the screen that is actively moving —
+  /// the calmer mint is for state that has already settled, like a finished
+  /// step's outline, and looks washed out draining around a timer.
+  static const timerRing = Color(0xFF00E676);
 }
 
 /// Every interactive surface in the mockups is either a stadium pill or a
