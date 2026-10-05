@@ -52,4 +52,8 @@ still succeeds and every icon renders blank.
 
 ## Licence
 
-[MIT](LICENSE).
+[PolyForm Noncommercial 1.0.0](LICENSE).
+
+Use it, study it, change it, share it — for anything that is not commercial.
+Selling it, or using it to make money, is not permitted. Charities, schools and
+public bodies count as noncommercial.
