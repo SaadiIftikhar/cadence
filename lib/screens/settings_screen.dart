@@ -210,7 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         const _SectionLabel('About'),
         const _SettingRow(
           icon: Symbols.info,
-          title: 'Step Reminder',
+          title: 'Cadence',
           subtitle: 'Reminders with steps, icons and timers',
         ),
       ],

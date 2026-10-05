@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A beat: three round-capped bars about a centre line, the middle one
+     longest and in the accent green. Round caps so the bars carry the same
+     stadium shape the UI uses everywhere else.
+     Everything sits inside the 66dp safe zone, so no launcher mask clips it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:pathData="M37,68 L37,40"
+        android:strokeColor="#D0BCFF"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M54,81 L54,27"
+        android:strokeColor="#6EDC9B"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M71,72 L71,36"
+        android:strokeColor="#D0BCFF"
+        android:strokeWidth="10"
+        android:strokeLineCap="round" />
+</vector>

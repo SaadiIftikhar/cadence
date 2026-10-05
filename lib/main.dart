@@ -110,7 +110,7 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Step Reminder',
+      title: 'Cadence',
       debugShowCheckedModeBanner: false,
       navigatorKey: _navigatorKey,
       theme: buildAppTheme(),
