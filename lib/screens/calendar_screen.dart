@@ -72,6 +72,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 weekdayStyle: TextStyle(color: AppColors.onSurfaceVariant),
                 weekendStyle: TextStyle(color: AppColors.onSurfaceVariant),
               ),
+              // Taller rows than the default 52, so the selected day's circle
+              // and the dot beneath it each have room of their own.
+              rowHeight: 58,
               calendarStyle: const CalendarStyle(
                 defaultTextStyle: TextStyle(color: AppColors.onSurface),
                 weekendTextStyle: TextStyle(color: AppColors.onSurface),
@@ -93,7 +96,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   color: AppColors.accentPink,
                   shape: BoxShape.circle,
                 ),
-                markersMaxCount: 3,
+                // One dot answers the only question the grid is being asked:
+                // is there anything on this day. How many there are is what
+                // the list below is for, and a row of dots per day turned the
+                // month into noise.
+                markersMaxCount: 1,
+                markerSize: 6,
+                // Pinned to the bottom of the cell rather than auto-anchored,
+                // which placed it over the selected day's circle.
+                markersAutoAligned: false,
+                markersOffset: PositionedOffset(bottom: 2),
+                // Vertical margin shrinks the day circle, leaving the dot its
+                // own band underneath.
+                cellMargin: EdgeInsets.symmetric(horizontal: 6, vertical: 7),
               ),
             ),
             const SizedBox(height: 30),

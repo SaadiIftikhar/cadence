@@ -44,5 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Release signing. Never commit these: the keystore and its passwords are what
+# prove a build came from you, and anyone holding them can publish as you.
+*.jks
+*.keystore
+key.properties
+
 # Widget Preview related
 .widget_preview/

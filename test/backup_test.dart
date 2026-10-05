@@ -319,6 +319,120 @@ void main() {
       expect((await db.allReminders()).single.title, 'From a loose manifest');
     });
 
+    test('a whole mixed set comes back field for field', () async {
+      // One of each kind the app can hold, so the check is against a realistic
+      // export rather than a single tidy routine.
+      final routineId = await db.upsertReminder(
+        RemindersCompanion.insert(
+          title: const Value('Morning routine'),
+          iconKey: const Value('wb_sunny'),
+          hour: const Value(6),
+          minute: const Value(45),
+          daysMask: const Value(0x1F),
+          notificationsEnabled: const Value(true),
+          alarmEnabled: const Value(true),
+          multiStep: const Value(true),
+        ),
+      );
+      await db.replaceSteps(routineId, [
+        ReminderStepsCompanion.insert(
+          reminderId: routineId,
+          title: const Value('Water'),
+          iconKey: const Value('water_drop'),
+        ),
+        ReminderStepsCompanion.insert(
+          reminderId: routineId,
+          title: const Value('Stretch'),
+          timerSeconds: const Value(300),
+        ),
+        ReminderStepsCompanion.insert(
+          reminderId: routineId,
+          title: const Value('Coffee'),
+          iconKey: const Value('coffee'),
+          timerSeconds: const Value(180),
+        ),
+      ]);
+
+      final singleId = await db.upsertReminder(
+        RemindersCompanion.insert(
+          title: const Value('Take tablets'),
+          iconKey: const Value('medication'),
+          hour: const Value(21),
+          minute: const Value(5),
+          daysMask: const Value(0x7F),
+          notificationsEnabled: const Value(true),
+          alarmEnabled: const Value(false),
+          multiStep: const Value(false),
+        ),
+      );
+      await db.replaceSteps(singleId, [
+        ReminderStepsCompanion.insert(
+          reminderId: singleId,
+          title: const Value('Take tablets'),
+          iconKey: const Value('medication'),
+          timerSeconds: const Value(60),
+        ),
+      ]);
+
+      final offId = await db.upsertReminder(
+        RemindersCompanion.insert(
+          title: const Value('Bin night'),
+          iconKey: const Value('delete'),
+          hour: const Value(19),
+          minute: const Value(30),
+          daysMask: const Value(0),
+          notificationsEnabled: const Value(false),
+          alarmEnabled: const Value(false),
+          multiStep: const Value(false),
+          enabled: const Value(false),
+        ),
+      );
+      await db.replaceSteps(offId, [
+        ReminderStepsCompanion.insert(
+          reminderId: offId,
+          title: const Value('Bin night'),
+        ),
+      ]);
+
+      Future<Map<String, Object?>> snapshot() async {
+        final out = <String, Object?>{};
+        for (final r in await db.allReminders()) {
+          out[r.title] = {
+            'iconKey': r.iconKey,
+            'hour': r.hour,
+            'minute': r.minute,
+            'daysMask': r.daysMask,
+            'notificationsEnabled': r.notificationsEnabled,
+            'alarmEnabled': r.alarmEnabled,
+            'multiStep': r.multiStep,
+            'enabled': r.enabled,
+            'steps': [
+              for (final s in await db.stepsFor(r.id))
+                {
+                  'title': s.title,
+                  'iconKey': s.iconKey,
+                  'timerSeconds': s.timerSeconds,
+                  'position': s.position,
+                },
+            ],
+          };
+        }
+        return out;
+      }
+
+      final before = await snapshot();
+      expect(before, hasLength(3));
+
+      final zip = await service.export();
+      await db.deleteAllReminders();
+      expect(await db.allReminders(), isEmpty);
+
+      final count = await service.import(zip, mode: ImportMode.add);
+      expect(count, 3);
+
+      expect(await snapshot(), before);
+    });
+
     test('the zip holds the manifest and nothing unexpected', () async {
       await addRoutine();
       final names = namesIn(await service.export());
