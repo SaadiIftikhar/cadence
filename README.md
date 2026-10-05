@@ -1,6 +1,10 @@
-# Cadence
+<p align="center">
+  <img src="docs/logo.png" alt="Cadence" width="140">
+</p>
 
-An Android reminder app for routines you walk through one step at a time.
+<h1 align="center">Cadence</h1>
+
+<p align="center">An Android reminder app for routines you walk through one step at a time.</p>
 
 A reminder is either a single step or an ordered routine of them, each with its
 own icon and optional countdown. Finishing a step moves you straight to the next
