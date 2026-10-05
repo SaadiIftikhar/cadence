@@ -233,6 +233,24 @@ class ReminderRepository {
     return rows.map(StepDraft.fromRow).toList();
   }
 
+  /// Clears out one-off reminders whose day has been and gone.
+  ///
+  /// They were already hidden from the home list and absent from the calendar,
+  /// which left them in the database with no way to reach them and no way to
+  /// delete them. A one-off past its day has nothing left to do and no
+  /// progress worth keeping, so it goes. Steps follow through the cascade, and
+  /// going through [delete] means the notification is cancelled too.
+  ///
+  /// Returns how many were removed.
+  Future<int> removeLapsedOneOffs(DateTime now) async {
+    final all = await _db.allReminders();
+    final lapsed = all.where((r) => hasLapsed(r, now)).toList();
+    for (final reminder in lapsed) {
+      await delete(reminder.id);
+    }
+    return lapsed.length;
+  }
+
   /// Re-arms every scheduled notification. Android drops alarms on reboot and
   /// on app reinstall, so this runs at startup.
   ///

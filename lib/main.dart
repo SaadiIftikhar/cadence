@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'data/app_prefs.dart';
+import 'data/housekeeping.dart';
 import 'data/providers.dart';
 import 'screens/alarm_screen.dart';
 import 'screens/home_screen.dart';
@@ -47,8 +49,18 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Yesterday's one-offs go first, so the pictures they were holding on to
+      // are already unreferenced by the time the sweep below looks, and so
+      // nothing is re-armed for a reminder about to be deleted.
+      await ref.read(repositoryProvider).removeLapsedOneOffs(DateTime.now());
+
       // Android drops scheduled alarms on reboot and reinstall, so re-arm them.
       await ref.read(repositoryProvider).rescheduleAll();
+
+      await deleteOrphanedImages(
+        ref.read(databaseProvider),
+        await getApplicationDocumentsDirectory(),
+      );
     });
 
     NotificationService.instance.launchReminderId

@@ -8,6 +8,7 @@ class AppPrefs {
   static const _seenOnboarding = 'seen_onboarding';
   static const _seenIconHint = 'seen_icon_hint';
   static const _seenTimeHint = 'seen_time_hint';
+  static const _runningTimer = 'running_timer';
 
   static Future<bool> seenOnboarding() async =>
       (await SharedPreferences.getInstance()).getBool(_seenOnboarding) ?? false;
@@ -32,4 +33,35 @@ class AppPrefs {
 
   static Future<void> markTimeHintSeen() async =>
       (await SharedPreferences.getInstance()).setBool(_seenTimeHint, true);
+
+  /// The step countdown currently running, and the moment it ends.
+  ///
+  /// Held here rather than in memory because the screen's ticker dies with the
+  /// process: this is what lets a timer started before the phone was locked
+  /// still show the right number when the app comes back. One at a time —
+  /// starting a timer on another step replaces this one.
+  static Future<({int stepId, DateTime endsAt})?> runningTimer() async {
+    final raw = (await SharedPreferences.getInstance()).getString(_runningTimer);
+    if (raw == null) return null;
+
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final stepId = int.tryParse(parts[0]);
+    final millis = int.tryParse(parts[1]);
+    if (stepId == null || millis == null) return null;
+
+    return (
+      stepId: stepId,
+      endsAt: DateTime.fromMillisecondsSinceEpoch(millis),
+    );
+  }
+
+  static Future<void> setRunningTimer(int stepId, DateTime endsAt) async =>
+      (await SharedPreferences.getInstance()).setString(
+        _runningTimer,
+        '$stepId:${endsAt.millisecondsSinceEpoch}',
+      );
+
+  static Future<void> clearRunningTimer() async =>
+      (await SharedPreferences.getInstance()).remove(_runningTimer);
 }

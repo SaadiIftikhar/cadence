@@ -65,6 +65,11 @@ class NotificationService {
   /// without keeping a side table. Seven weekday slots plus one one-shot slot.
   static const _slotsPerReminder = 8;
 
+  /// Step timers are scheduled from a separate id range, far above anything
+  /// `reminderId * _slotsPerReminder` can reach, so cancelling a finished
+  /// timer can never cancel somebody's reminder.
+  static const _timerIdBase = 0x40000000;
+
   /// Set when a notification launched the app, so the UI can jump straight to
   /// the reminder that fired.
   final ValueNotifier<int?> launchReminderId = ValueNotifier(null);
@@ -112,6 +117,52 @@ class NotificationService {
   Future<void> releaseLockScreen() async {
     try {
       await _lockScreen.invokeMethod<void>('release');
+    } catch (_) {}
+  }
+
+  /// Rings when a step's countdown runs out, whether or not the app is still
+  /// on screen. The in-app ticker only draws the number; it dies with the
+  /// process, so this is what actually makes a timer go off.
+  ///
+  /// Silent where no platform is listening, which includes tests.
+  Future<void> scheduleTimerEnd({
+    required int stepId,
+    required String title,
+    required DateTime endsAt,
+  }) async {
+    try {
+      // Inside the guard: reading tz.local before the timezone database has
+      // been loaded throws, which is the state anywhere init() has not run.
+      final when = tz.TZDateTime.from(endsAt, tz.local);
+      if (!when.isAfter(tz.TZDateTime.now(tz.local))) return;
+
+      await _plugin.zonedSchedule(
+        id: _timerIdBase + stepId,
+        title: title,
+        body: 'Timer finished',
+        scheduledDate: when,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _reminderChannel,
+            'Reminders',
+            importance: Importance.high,
+            priority: Priority.high,
+            category: AndroidNotificationCategory.alarm,
+            playSound: true,
+            enableVibration: true,
+            autoCancel: true,
+          ),
+        ),
+        androidScheduleMode: await canScheduleExact()
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> cancelTimerEnd(int stepId) async {
+    try {
+      await _plugin.cancel(id: _timerIdBase + stepId);
     } catch (_) {}
   }
 
@@ -255,8 +306,13 @@ class NotificationService {
 
   Future<void> cancelReminder(int reminderId) async {
     final base = reminderId * _slotsPerReminder;
-    for (var slot = 0; slot < _slotsPerReminder; slot++) {
-      await _plugin.cancel(id: base + slot);
+    try {
+      for (var slot = 0; slot < _slotsPerReminder; slot++) {
+        await _plugin.cancel(id: base + slot);
+      }
+    } catch (_) {
+      // No platform listening, so there is nothing posted to cancel. Deleting
+      // a reminder must not fail on account of it.
     }
   }
 

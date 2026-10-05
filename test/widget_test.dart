@@ -349,6 +349,12 @@ void main() {
   });
 
   group('Run step screen', () {
+    setUp(() {
+      // Starting a timer stores its deadline, so the screen needs a prefs
+      // store even when the test never looks at one.
+      SharedPreferences.setMockInitialValues({});
+    });
+
     Future<void> pumpTimed(
       WidgetTester tester, {
       int? timerSeconds,

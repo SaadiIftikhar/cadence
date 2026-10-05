@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../data/app_prefs.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../services/chime.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/timer_pill.dart';
@@ -29,7 +31,8 @@ class RunStepScreen extends ConsumerStatefulWidget {
   ConsumerState<RunStepScreen> createState() => _RunStepScreenState();
 }
 
-class _RunStepScreenState extends ConsumerState<RunStepScreen> {
+class _RunStepScreenState extends ConsumerState<RunStepScreen>
+    with WidgetsBindingObserver {
   /// The step on show, which finishing one replaces with the next rather than
   /// opening a screen of its own — see [_advanceTo].
   late ReminderStep _step = widget.step;
@@ -47,16 +50,53 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   bool get _finished => _remaining <= Duration.zero;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _adoptRunningTimer();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Only the ticker stops. A running timer is deliberately left armed, so
+    // walking away from the screen does not cancel the countdown.
     _ticker?.cancel();
     super.dispose();
   }
 
-  void _start() {
-    // Pressing play on a finished timer runs it again from the top.
-    if (_finished) _remaining = _total;
-    if (_remaining <= Duration.zero) return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back from the background, the clock has moved on without the
+    // ticker. The stored deadline is the truth; the ticker only draws it.
+    if (state == AppLifecycleState.resumed) _adoptRunningTimer();
+  }
 
+  /// Picks up whatever countdown is already running for this step, if any.
+  Future<void> _adoptRunningTimer() async {
+    final running = await AppPrefs.runningTimer();
+    if (!mounted) return;
+    if (running == null || running.stepId != _step.id) return;
+
+    final left = running.endsAt.difference(DateTime.now());
+    if (left <= Duration.zero) {
+      await AppPrefs.clearRunningTimer();
+      if (!mounted) return;
+      setState(() {
+        _remaining = Duration.zero;
+        _running = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _remaining = left;
+      _running = true;
+    });
+    _tick();
+  }
+
+  void _tick() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
@@ -65,22 +105,53 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
           _remaining = Duration.zero;
           _running = false;
           _ticker?.cancel();
+          // The scheduled notification is about to fire for the same moment,
+          // and the app is plainly in front of the user, so it is dropped in
+          // favour of the chime rather than sounding twice.
+          _disarm();
           HapticFeedback.heavyImpact();
           Chime.instance.timerFinished();
         }
       });
     });
+  }
+
+  /// Hands the deadline to the system, so it survives this screen going away.
+  Future<void> _arm(Duration left) async {
+    final endsAt = DateTime.now().add(left);
+    await AppPrefs.setRunningTimer(_step.id, endsAt);
+    await NotificationService.instance.scheduleTimerEnd(
+      stepId: _step.id,
+      title: _step.title.trim().isEmpty ? 'Step' : _step.title.trim(),
+      endsAt: endsAt,
+    );
+  }
+
+  Future<void> _disarm() async {
+    await NotificationService.instance.cancelTimerEnd(_step.id);
+    await AppPrefs.clearRunningTimer();
+  }
+
+  void _start() {
+    // Pressing play on a finished timer runs it again from the top.
+    if (_finished) _remaining = _total;
+    if (_remaining <= Duration.zero) return;
+
+    _arm(_remaining);
+    _tick();
     setState(() => _running = true);
   }
 
   void _pause() {
     _ticker?.cancel();
+    _disarm();
     setState(() => _running = false);
   }
 
   /// Back to the full duration, still paused.
   void _restartTimer() {
     _ticker?.cancel();
+    _disarm();
     setState(() {
       _remaining = _total;
       _running = false;
@@ -101,6 +172,8 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen> {
   /// and pick up the new step's state instead.
   void _showStep(ReminderStep step) {
     _ticker?.cancel();
+    // The step being left behind takes its countdown with it.
+    _disarm();
     setState(() {
       _step = step;
       _remaining = Duration(seconds: step.timerSeconds ?? 0);
