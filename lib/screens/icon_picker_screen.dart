@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 
@@ -63,7 +64,7 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
               textInputAction: TextInputAction.search,
               style: const TextStyle(fontSize: 19),
               decoration: InputDecoration(
-                hintText: 'Search',
+                hintText: AppLocalizations.of(context).actionSearch,
                 prefixIcon: const Padding(
                   padding: EdgeInsets.only(left: 16, right: 12),
                   child: Icon(Symbols.search, size: 26),
@@ -79,10 +80,10 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
           ),
           Expanded(
             child: _results.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
-                      'No icons match that search.',
-                      style: TextStyle(color: AppColors.onSurfaceVariant),
+                      AppLocalizations.of(context).iconSearchEmpty,
+                      style: const TextStyle(color: AppColors.onSurfaceVariant),
                     ),
                   )
                 : GridView.builder(

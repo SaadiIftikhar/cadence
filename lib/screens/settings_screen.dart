@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/backup.dart';
 import '../data/backup_service.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
@@ -58,7 +59,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       _busy = false;
     });
     if (!status.allGranted) {
-      _toast('Still blocked — you can change it in system settings.');
+      _toast(AppLocalizations.of(context).stillBlockedToast);
       return;
     }
     // Anything scheduled while the permission was missing was scheduled
@@ -67,6 +68,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Future<void> _export() async {
+    // Read up front: the save dialog opens several awaits later, by which
+    // point reaching back for the context is no longer sound.
+    final dialogTitle = AppLocalizations.of(context).saveBackupDialog;
     setState(() => _busy = true);
     try {
       final service = await ref.read(backupServiceProvider.future);
@@ -74,15 +78,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       final stamp = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final saved = await FilePicker.saveFile(
-        fileName: 'step-reminder-$stamp.zip',
+        fileName: 'cadence-$stamp.zip',
         bytes: zip,
         mimeType: 'application/zip',
-        dialogTitle: 'Save backup',
+        dialogTitle: dialogTitle,
       );
       if (!mounted) return;
-      if (saved != null) _toast('Backup saved.');
+      if (saved != null) _toast(AppLocalizations.of(context).backupSaved);
     } catch (_) {
-      if (mounted) _toast('Could not save the backup.');
+      if (mounted) _toast(AppLocalizations.of(context).backupSaveFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -90,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   Future<void> _import() async {
     final picked = await FilePicker.pickFiles(
-      dialogTitle: 'Choose a backup',
+      dialogTitle: AppLocalizations.of(context).chooseBackupDialog,
       type: FileType.custom,
       // A bare manifest works too, for anyone who unzipped one.
       allowedExtensions: const ['zip', 'json'],
@@ -110,11 +114,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       final count = await service.import(bytes, mode: mode);
       await ref.read(repositoryProvider).rescheduleAll();
       if (!mounted) return;
-      _toast('Imported $count reminder${count == 1 ? '' : 's'}.');
+      _toast(AppLocalizations.of(context).importedCount(count));
     } on BackupFormatException catch (e) {
-      if (mounted) _toast(e.message);
+      if (mounted) _toast(_backupProblemText(AppLocalizations.of(context), e));
     } catch (_) {
-      if (mounted) _toast('Could not read that file.');
+      if (mounted) _toast(AppLocalizations.of(context).backupReadFailed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -123,38 +127,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   Future<ImportMode?> _askImportMode(int existing) => showDialog<ImportMode>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Import backup'),
-          content: Text(
-            'You already have $existing reminder${existing == 1 ? '' : 's'}. '
-            'Keep them and add the backup alongside, or replace everything '
-            'with what is in the file?',
-          ),
+          title: Text(AppLocalizations.of(ctx).importDialogTitle),
+          content: Text(AppLocalizations.of(ctx).importDialogMessage(existing)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(ctx).actionCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, ImportMode.add),
-              child: const Text('Add'),
+              child: Text(AppLocalizations.of(ctx).actionAdd),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, ImportMode.replace),
-              child: const Text(
-                'Replace',
-                style: TextStyle(color: AppColors.danger),
+              child: Text(
+                AppLocalizations.of(ctx).actionReplace,
+                style: const TextStyle(color: AppColors.danger),
               ),
             ),
           ],
         ),
       );
 
-  String get _permissionSubtitle {
+  /// Puts the reading failure into the user's language. The exception itself
+  /// only names the problem, having no way to reach the strings.
+  String _backupProblemText(AppLocalizations l10n, BackupFormatException e) =>
+      switch (e.problem) {
+        BackupProblem.notABackup => l10n.backupNotABackup,
+        BackupProblem.wrongApp => l10n.backupWrongApp,
+        BackupProblem.newerVersion => l10n.backupNewerVersion,
+        BackupProblem.noReminders => l10n.backupNoReminders,
+        BackupProblem.damaged => l10n.backupDamaged,
+        BackupProblem.stepless => l10n.backupStepless,
+        BackupProblem.zipUnreadable => l10n.backupZipUnreadable,
+        BackupProblem.zipNotABackup => l10n.backupZipNotABackup,
+      };
+
+  String _permissionSubtitle(AppLocalizations l10n) {
     final status = _status;
-    if (status == null) return 'Checking…';
-    if (status.allGranted) return 'Notifications and exact alarms allowed';
-    if (!status.notifications) return 'Notifications are blocked';
-    return 'Exact alarms blocked — reminders may fire late';
+    if (status == null) return l10n.permissionsChecking;
+    if (status.allGranted) return l10n.permissionsAllowed;
+    if (!status.notifications) return l10n.permissionsBlocked;
+    return l10n.permissionsExactBlocked;
   }
 
   void _toast(String message) {
@@ -165,16 +179,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
         // No screen heading: the bottom bar already names this tab, and Home
         // and Calendar do not carry one either.
-        const _SectionLabel('Permissions'),
+        _SectionLabel(l10n.sectionPermissions),
         _SettingRow(
           icon: Symbols.notifications,
-          title: 'Notifications and alarms',
-          subtitle: _permissionSubtitle,
+          title: l10n.permissionsRow,
+          subtitle: _permissionSubtitle(l10n),
           trailing: _status == null
               ? null
               : _status!.allGranted
@@ -183,35 +199,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                       size: 26, color: AppColors.success)
                   : TextButton(
                       onPressed: _busy ? null : _request,
-                      child: const Text('Grant'),
+                      child: Text(l10n.actionGrant),
                     ),
         ),
         const SizedBox(height: 26),
-        const _SectionLabel('Backup'),
+        _SectionLabel(l10n.sectionBackup),
         _SettingRow(
           icon: Symbols.download,
-          title: 'Export',
-          subtitle: 'Save your reminders to a file',
+          title: l10n.exportTitle,
+          subtitle: l10n.exportSubtitle,
           trailing: TextButton(
             onPressed: _busy ? null : _export,
-            child: const Text('Export'),
+            child: Text(l10n.exportTitle),
           ),
         ),
         _SettingRow(
           icon: Symbols.upload,
-          title: 'Import',
-          subtitle: 'Bring reminders in from a backup file',
+          title: l10n.importTitle,
+          subtitle: l10n.importSubtitle,
           trailing: TextButton(
             onPressed: _busy ? null : _import,
-            child: const Text('Import'),
+            child: Text(l10n.importTitle),
           ),
         ),
         const SizedBox(height: 26),
-        const _SectionLabel('About'),
-        const _SettingRow(
+        _SectionLabel(l10n.sectionAbout),
+        _SettingRow(
           icon: Symbols.info,
-          title: 'Cadence',
-          subtitle: 'Reminders with steps, icons and timers',
+          title: l10n.appName,
+          subtitle: l10n.appTagline,
         ),
       ],
     );

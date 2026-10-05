@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../data/app_prefs.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
@@ -199,6 +200,10 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
   }
 
   Future<void> _pickImage() async {
+    // Read before leaving for the gallery, so the cropper's title does not
+    // depend on this screen's context surviving the trip.
+    final cropTitle = AppLocalizations.of(context).cropImage;
+
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 
@@ -215,7 +220,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       compressQuality: 90,
       uiSettings: [
         AndroidUiSettings(
-          toolbarTitle: 'Crop image',
+          toolbarTitle: cropTitle,
           toolbarColor: AppColors.background,
           toolbarWidgetColor: AppColors.onSurface,
           backgroundColor: AppColors.background,
@@ -225,7 +230,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           lockAspectRatio: true,
         ),
         IOSUiSettings(
-          title: 'Crop image',
+          title: cropTitle,
           aspectRatioLockEnabled: true,
           resetAspectRatioEnabled: false,
         ),
@@ -298,9 +303,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     if (_notifications || _alarm) {
       final status = await NotificationService.instance.requestPermissions();
       if (mounted && !status.notifications) {
-        _toast('Notifications are blocked — enable them in system settings.');
+        _toast(AppLocalizations.of(context).notificationsBlockedToast);
       } else if (mounted && !status.exactAlarms) {
-        _toast('Exact alarms are off; reminders may fire late.');
+        _toast(AppLocalizations.of(context).exactAlarmsOffToast);
       }
     }
 
@@ -340,13 +345,15 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  String get _screenTitle {
-    if (_routine) return _isNew ? 'New routine' : 'Edit routine';
-    return _isNew ? 'New step' : 'Edit step';
+  String _screenTitle(AppLocalizations l10n) {
+    if (_routine) return _isNew ? l10n.newRoutine : l10n.editRoutine;
+    return _isNew ? l10n.newStep : l10n.editStep;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -357,7 +364,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           icon: const Icon(Symbols.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(_screenTitle),
+        title: Text(_screenTitle(l10n)),
         actions: [
           IconButton(
             icon: _saving
@@ -366,7 +373,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2.5),
                   )
-                : const Icon(Symbols.save, semanticLabel: 'Save'),
+                : Icon(Symbols.save, semanticLabel: l10n.actionSave),
             onPressed: _saving ? null : _save,
           ),
           const SizedBox(width: 8),
@@ -385,7 +392,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               }
             },
             decoration: InputDecoration(
-              labelText: _routine ? 'Routine name' : 'Step title',
+              labelText: _routine ? l10n.routineName : l10n.stepTitle,
               floatingLabelBehavior: FloatingLabelBehavior.always,
               enabledBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
               focusedBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
@@ -399,15 +406,15 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ),
           if (_showIconHint)
             HintCallout(
-              message: 'Tap the icon to change it',
+              message: l10n.iconHint,
               onDismiss: _dismissIconHint,
             ),
           const SizedBox(height: 18),
           ValuePill(
             icon: Symbols.schedule,
-            label: 'Time',
+            label: l10n.fieldTime,
             value: _time == null
-                ? 'Set time'
+                ? l10n.setTime
                 : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
             placeholder: _time == null,
             invalid: _timeInvalid,
@@ -415,16 +422,15 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ),
           if (_showTimeHint)
             HintCallout(
-              message: 'Where a card sits on the home screen depends on '
-                  'its time',
+              message: l10n.timeHint,
               onDismiss: _dismissTimeHint,
               arrowInset: 34,
             ),
           const SizedBox(height: 12),
           ValuePill(
             icon: Symbols.repeat,
-            label: 'Repeat',
-            value: describeDays(_daysMask),
+            label: l10n.fieldRepeat,
+            value: describeDays(l10n, _daysMask),
             placeholder: _daysMask == 0,
             onTap: _pickDays,
           ),
@@ -437,12 +443,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ],
           const SizedBox(height: 18),
           LabeledSwitch(
-            label: 'Notifications',
+            label: l10n.switchNotifications,
             value: _notifications,
             onChanged: (v) => setState(() => _notifications = v),
           ),
           LabeledSwitch(
-            label: 'Alarm',
+            label: l10n.switchAlarm,
             value: _alarm,
             onChanged: (v) => setState(() => _alarm = v),
           ),
@@ -450,7 +456,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           const Divider(),
           const SizedBox(height: 18),
           LabeledSwitch(
-            label: 'Add image',
+            label: l10n.switchAddImage,
             value: _addImage,
             onChanged: (v) => setState(() => _addImage = v),
           ),
@@ -463,22 +469,22 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             const Divider(),
             const SizedBox(height: 22),
             if (_steps.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
-                  'No steps yet.',
+                  l10n.noStepsYet,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 15, color: AppColors.onSurfaceVariant),
                 ),
               )
             else ...[
               if (_steps.length > 1)
-                const Padding(
-                  padding: EdgeInsets.only(left: 4, bottom: 10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, bottom: 10),
                   child: Text(
-                    'Press and hold a step to reorder',
-                    style: TextStyle(
+                    l10n.reorderHint,
+                    style: const TextStyle(
                         fontSize: 13, color: AppColors.onSurfaceVariant),
                   ),
                 ),
@@ -496,7 +502,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                   padding: EdgeInsets.only(bottom: i == _steps.length - 1 ? 0 : 12),
                   child: PillTile(
                     label: _steps[i].title.isEmpty
-                        ? 'Untitled step'
+                        ? l10n.untitledStep
                         : _steps[i].title,
                     iconKey: _steps[i].iconKey,
                     onTap: () => _editStep(i),
@@ -527,7 +533,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                       )
                     : null,
                 icon: const Icon(Symbols.add, size: 24),
-                label: const Text('Add step'),
+                label: Text(l10n.addStep),
               ),
             ),
           ],

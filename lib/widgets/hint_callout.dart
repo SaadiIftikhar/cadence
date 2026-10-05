@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// A one-off note pointing up at the control above it, explaining something
@@ -63,7 +64,7 @@ class HintCallout extends StatelessWidget {
                     foregroundColor: AppColors.onPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                   ),
-                  child: const Text('Got it'),
+                  child: Text(AppLocalizations.of(context).actionGotIt),
                 ),
               ],
             ),

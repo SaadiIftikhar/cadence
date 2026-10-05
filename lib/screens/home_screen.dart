@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/database.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/anchored_menu.dart';
@@ -36,15 +37,15 @@ class _HomeShellState extends State<HomeShell> {
     final routine = await showAnchoredMenu<bool>(
       context: context,
       anchorKey: _fabKey,
-      actions: const [
+      actions: [
         MenuAction(
           icon: Symbols.format_list_numbered,
-          label: 'Add a routine',
+          label: AppLocalizations.of(context).addRoutine,
           value: true,
         ),
         MenuAction(
           icon: Symbols.check_circle,
-          label: 'Add a step',
+          label: AppLocalizations.of(context).addStepMenuItem,
           value: false,
         ),
       ],
@@ -91,7 +92,8 @@ class _HomeShellState extends State<HomeShell> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Symbols.add, size: 30, semanticLabel: 'Add'),
+                child: Icon(Symbols.add,
+                    size: 30, semanticLabel: AppLocalizations.of(context).addReminderButton),
               )
             : null,
         bottomNavigationBar:
@@ -122,19 +124,19 @@ class _BottomBar extends StatelessWidget {
           children: [
             _NavItem(
               icon: Symbols.home,
-              label: 'Home',
+              label: AppLocalizations.of(context).navHome,
               selected: index == 0,
               onTap: () => onSelected(0),
             ),
             _NavItem(
               icon: Symbols.calendar_month,
-              label: 'Calendar',
+              label: AppLocalizations.of(context).navCalendar,
               selected: index == 1,
               onTap: () => onSelected(1),
             ),
             _NavItem(
               icon: Symbols.settings,
-              label: 'Settings',
+              label: AppLocalizations.of(context).navSettings,
               selected: index == 2,
               onTap: () => onSelected(2),
             ),
@@ -206,10 +208,10 @@ class ReminderListView extends ConsumerWidget {
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, _) => const EmptyState(
+      error: (_, _) => EmptyState(
         icon: Symbols.error,
-        title: 'Could not load your reminders',
-        message: 'Restarting the app usually clears this.',
+        title: AppLocalizations.of(context).loadErrorTitle,
+        message: AppLocalizations.of(context).loadErrorMessage,
       ),
       data: (all) {
         // Filtered before the emptiness check, or a list holding nothing but
@@ -218,10 +220,10 @@ class ReminderListView extends ConsumerWidget {
         final items =
             orderedForHome(withoutLapsedOneOffs(all, DateTime.now()), progress);
         if (items.isEmpty) {
-          return const EmptyState(
+          return EmptyState(
             icon: Symbols.alarm_add,
-            title: 'No reminders yet',
-            message: 'Tap + to create one.',
+            title: AppLocalizations.of(context).emptyHomeTitle,
+            message: AppLocalizations.of(context).emptyHomeMessage,
           );
         }
         return ListView.separated(
@@ -281,21 +283,21 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete reminder?'),
+        title: Text(AppLocalizations.of(context).deleteReminderTitle),
         content: Text(
           widget.reminder.title.trim().isEmpty
-              ? 'This reminder and its steps will be removed.'
-              : '"${widget.reminder.title}" and its steps will be removed.',
+              ? AppLocalizations.of(context).deleteReminderMessage
+              : AppLocalizations.of(context).deleteReminderNamedMessage(widget.reminder.title),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.danger)),
+            child: Text(AppLocalizations.of(context).actionDelete,
+                style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -312,19 +314,19 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
       anchorKey: _anchor,
       preferAbove: false,
       actions: [
-        const MenuAction(icon: Symbols.edit, label: 'Edit', value: 'edit'),
+        MenuAction(icon: Symbols.edit, label: AppLocalizations.of(context).actionEdit, value: 'edit'),
         reminder.enabled
-            ? const MenuAction(
+            ? MenuAction(
                 icon: Symbols.notifications_off,
-                label: 'Turn off',
+                label: AppLocalizations.of(context).turnOff,
                 value: 'toggle',
               )
-            : const MenuAction(
+            : MenuAction(
                 icon: Symbols.notifications_active,
-                label: 'Turn on',
+                label: AppLocalizations.of(context).turnOn,
                 value: 'toggle',
               ),
-        const MenuAction(icon: Symbols.delete, label: 'Delete', value: 'delete'),
+        MenuAction(icon: Symbols.delete, label: AppLocalizations.of(context).actionDelete, value: 'delete'),
       ],
     );
 
@@ -341,10 +343,10 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
   @override
   Widget build(BuildContext context) {
     final r = widget.reminder;
-    final title = r.title.trim().isEmpty ? 'Untitled reminder' : r.title.trim();
+    final title = r.title.trim().isEmpty ? AppLocalizations.of(context).untitledReminder : r.title.trim();
     final time = MaterialLocalizations.of(context)
         .formatTimeOfDay(TimeOfDay(hour: r.hour, minute: r.minute));
-    final subtitle = '$time · ${describeDays(r.daysMask)}';
+    final subtitle = '$time · ${describeDays(AppLocalizations.of(context), r.daysMask)}';
     final p = widget.progress;
 
     return KeyedSubtree(

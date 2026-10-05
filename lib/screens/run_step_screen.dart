@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/app_prefs.dart';
+import '../l10n/app_localizations.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../services/chime.dart';
@@ -119,10 +120,16 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
   /// Hands the deadline to the system, so it survives this screen going away.
   Future<void> _arm(Duration left) async {
     final endsAt = DateTime.now().add(left);
+    // Read before the first await: what the notification is called has to be
+    // settled while the context is still known to be good.
+    final title = _step.title.trim().isEmpty
+        ? AppLocalizations.of(context).stepFallback
+        : _step.title.trim();
+
     await AppPrefs.setRunningTimer(_step.id, endsAt);
     await NotificationService.instance.scheduleTimerEnd(
       stepId: _step.id,
-      title: _step.title.trim().isEmpty ? 'Step' : _step.title.trim(),
+      title: title,
       endsAt: endsAt,
     );
   }
@@ -242,7 +249,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
               children: [
                 _CircleControl(
                   icon: _running ? Symbols.pause : Symbols.play_arrow,
-                  label: _running ? 'Pause' : 'Start',
+                  label: _running ? AppLocalizations.of(context).actionPause : AppLocalizations.of(context).actionStart,
                   onTap: _completed ? null : (_running ? _pause : _start),
                 ),
                 const SizedBox(width: 20),
@@ -254,7 +261,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
                 const SizedBox(width: 20),
                 _CircleControl(
                   icon: Symbols.restart_alt,
-                  label: 'Back to full time',
+                  label: AppLocalizations.of(context).backToFullTime,
                   onTap: _completed ? null : _restartTimer,
                 ),
               ],
@@ -267,7 +274,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
 
   @override
   Widget build(BuildContext context) {
-    final title = _step.title.trim().isEmpty ? 'Step' : _step.title.trim();
+    final title = _step.title.trim().isEmpty ? AppLocalizations.of(context).stepFallback : _step.title.trim();
 
     return Scaffold(
       appBar: AppBar(
@@ -330,7 +337,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
                       // to full is the control next to the timer itself.
                       onPressed: _completed ? _reset : null,
                       icon: const Icon(Symbols.refresh, size: 24),
-                      label: const Text('Reset'),
+                      label: Text(AppLocalizations.of(context).actionReset),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -347,7 +354,7 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
                         size: 24,
                         color: _completed ? AppColors.success : null,
                       ),
-                      label: const Text('Done'),
+                      label: Text(AppLocalizations.of(context).actionDone),
                     ),
                   ),
                 ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 
@@ -50,15 +51,18 @@ class _TimerPickerState extends State<TimerPicker> {
                 children: [
                   const Icon(Symbols.timer, size: 28),
                   const SizedBox(width: 18),
-                  const Expanded(
-                    child: Text('Step timer', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context).stepTimer,
+                      style: const TextStyle(fontSize: 20),
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.only(right: 10),
                     child: Text(
                       seconds > 0
                           ? formatDuration(Duration(seconds: seconds))
-                          : 'None',
+                          : AppLocalizations.of(context).timerNone,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
@@ -90,7 +94,7 @@ class _TimerPickerState extends State<TimerPicker> {
                   children: [
                     Expanded(
                       child: _UnitPicker(
-                        label: 'Hours',
+                        label: AppLocalizations.of(context).hours,
                         value: seconds ~/ 3600,
                         max: 23,
                         onChanged: (v) => _setUnit(hours: v),
@@ -99,7 +103,7 @@ class _TimerPickerState extends State<TimerPicker> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _UnitPicker(
-                        label: 'Minutes',
+                        label: AppLocalizations.of(context).minutes,
                         value: (seconds % 3600) ~/ 60,
                         max: 59,
                         onChanged: (v) => _setUnit(minutes: v),
@@ -108,7 +112,7 @@ class _TimerPickerState extends State<TimerPicker> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _UnitPicker(
-                        label: 'Seconds',
+                        label: AppLocalizations.of(context).seconds,
                         value: seconds % 60,
                         max: 59,
                         onChanged: (v) => _setUnit(secs: v),
@@ -122,7 +126,7 @@ class _TimerPickerState extends State<TimerPicker> {
                     child: TextButton.icon(
                       onPressed: () => widget.onChanged(0),
                       icon: const Icon(Symbols.close, size: 20),
-                      label: const Text('No timer'),
+                      label: Text(AppLocalizations.of(context).noTimer),
                     ),
                   ),
               ],

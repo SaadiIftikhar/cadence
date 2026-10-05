@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:step_reminder/l10n/app_localizations.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:step_reminder/data/database.dart';
@@ -82,17 +83,23 @@ void main() {
   });
 
   group('describeDays', () {
+    late AppLocalizations l10n;
+
+    setUpAll(() async {
+      l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    });
+
     test('names the common presets', () {
-      expect(describeDays(0), 'Today only');
-      expect(describeDays(0x7F), 'Every day');
-      expect(describeDays(0x1F), 'Weekdays');
-      expect(describeDays(0x60), 'Weekend');
+      expect(describeDays(l10n, 0), 'Today only');
+      expect(describeDays(l10n, 0x7F), 'Every day');
+      expect(describeDays(l10n, 0x1F), 'Weekdays');
+      expect(describeDays(l10n, 0x60), 'Weekend');
     });
 
     test('lists arbitrary selections in weekday order', () {
       // Monday, Wednesday, Friday.
-      expect(describeDays(1 | 1 << 2 | 1 << 4), 'Mon, Wed, Fri');
-      expect(describeDays(1 << 6), 'Sun');
+      expect(describeDays(l10n, 1 | 1 << 2 | 1 << 4), 'Mon, Wed, Fri');
+      expect(describeDays(l10n, 1 << 6), 'Sun');
     });
   });
 
@@ -100,6 +107,8 @@ void main() {
     Future<void> pumpPill(WidgetTester tester, int done, int total) {
       return tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Center(
@@ -138,6 +147,8 @@ void main() {
       // show up as the wrong layout after any of those change.
       Future<void> pumpAt(double width, int total) => tester.pumpWidget(
             MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
               theme: buildAppTheme(),
               home: Scaffold(
                 body: Center(
@@ -169,6 +180,8 @@ void main() {
       // The image-card case: a tall rounded rectangle rather than a stadium.
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Center(
@@ -194,6 +207,8 @@ void main() {
       var icon = 0;
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Center(
@@ -237,6 +252,8 @@ void main() {
       var dismissed = 0;
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: HintCallout(
@@ -262,6 +279,8 @@ void main() {
     }) {
       return tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Center(child: TimerPill(remaining: remaining, total: total)),
@@ -363,6 +382,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: buildAppTheme(),
             home: RunStepScreen(
               step: ReminderStep(
@@ -509,6 +530,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: buildAppTheme(),
             home: RunStepScreen(
               step: ReminderStep(
@@ -581,6 +604,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: buildAppTheme(),
             home: const EditReminderScreen(isRoutine: true),
           ),
@@ -676,6 +701,8 @@ void main() {
     Future<void> pumpEditStep(WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: const EditStepScreen(allowDelete: false),
         ),
@@ -731,6 +758,8 @@ void main() {
       final key = GlobalKey();
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Center(
@@ -868,7 +897,9 @@ void main() {
             stepProgressProvider
                 .overrideWith((ref) => Stream.value(<int, StepProgress>{})),
           ],
-          child: MaterialApp(theme: buildAppTheme(), home: const HomeShell()),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,theme: buildAppTheme(), home: const HomeShell()),
         ),
       );
       await tester.pumpAndSettle();
@@ -1016,6 +1047,8 @@ void main() {
             remindersProvider.overrideWith((ref) => Stream.value(<Reminder>[])),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: buildAppTheme(),
             home: const Scaffold(body: CalendarScreen()),
           ),
@@ -1277,6 +1310,8 @@ void main() {
     Future<void> openWith(WidgetTester tester, int mask, void Function(int?) sink) async {
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: Builder(
@@ -1344,6 +1379,8 @@ void main() {
       var mask = 0;
       await tester.pumpWidget(
         MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: Scaffold(
             body: StatefulBuilder(

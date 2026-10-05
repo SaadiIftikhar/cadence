@@ -3,6 +3,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/app_prefs.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hint_callout.dart';
 import '../widgets/tappable_icon.dart';
@@ -101,12 +102,14 @@ class _EditStepScreenState extends State<EditStepScreen> {
         actions: [
           if (widget.allowDelete)
             IconButton(
-              icon: const Icon(Symbols.delete, semanticLabel: 'Delete step'),
+              icon: Icon(Symbols.delete,
+                  semanticLabel: AppLocalizations.of(context).deleteStep),
               onPressed: () =>
                   Navigator.pop(context, const StepEditResult.delete()),
             ),
           IconButton(
-            icon: const Icon(Symbols.save, semanticLabel: 'Save step'),
+            icon: Icon(Symbols.save,
+                semanticLabel: AppLocalizations.of(context).saveStep),
             onPressed: _save,
           ),
           const SizedBox(width: 8),
@@ -125,7 +128,7 @@ class _EditStepScreenState extends State<EditStepScreen> {
               }
             },
             decoration: InputDecoration(
-              labelText: 'Step title',
+              labelText: AppLocalizations.of(context).stepTitle,
               floatingLabelBehavior: FloatingLabelBehavior.always,
               enabledBorder:
                   _titleInvalid ? AppShapes.invalidFieldBorder : null,
@@ -141,7 +144,7 @@ class _EditStepScreenState extends State<EditStepScreen> {
           ),
           if (_showIconHint)
             HintCallout(
-              message: 'Tap the icon to change it',
+              message: AppLocalizations.of(context).iconHint,
               onDismiss: _dismissIconHint,
             ),
           const SizedBox(height: 26),

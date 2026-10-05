@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 /// A stadium row that names a setting and shows its current value.
@@ -82,13 +83,21 @@ class ValuePill extends StatelessWidget {
 /// An empty mask is a one-off reminder with no repeat. It is worded as
 /// "Today only" rather than the more literally exact "once" so it reads
 /// as a plain description of when it fires, not a warning about repeats.
-String describeDays(int mask) {
-  if (mask == 0) return 'Today only';
-  if (mask == 0x7F) return 'Every day';
-  if (mask == 0x1F) return 'Weekdays';
-  if (mask == 0x60) return 'Weekend';
+String describeDays(AppLocalizations l10n, int mask) {
+  if (mask == 0) return l10n.repeatTodayOnly;
+  if (mask == 0x7F) return l10n.repeatEveryDay;
+  if (mask == 0x1F) return l10n.repeatWeekdays;
+  if (mask == 0x60) return l10n.repeatWeekend;
 
-  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  final names = [
+    l10n.dayMon,
+    l10n.dayTue,
+    l10n.dayWed,
+    l10n.dayThu,
+    l10n.dayFri,
+    l10n.daySat,
+    l10n.daySun,
+  ];
   return [
     for (var i = 0; i < 7; i++)
       if (mask & (1 << i) != 0) names[i],
@@ -97,21 +106,24 @@ String describeDays(int mask) {
 
 /// One-tap shortcuts for the selections people actually reach for. The labels
 /// match what [describeDays] reports back, so the dialog uses one vocabulary.
-const _dayPresets = <({String label, int mask})>[
-  (label: 'Every day', mask: 0x7F),
-  (label: 'Weekdays', mask: 0x1F),
-  (label: 'Weekend', mask: 0x60),
-];
+List<({String label, int mask})> _dayPresets(AppLocalizations l10n) => [
+      (label: l10n.repeatEveryDay, mask: 0x7F),
+      (label: l10n.repeatWeekdays, mask: 0x1F),
+      (label: l10n.repeatWeekend, mask: 0x60),
+    ];
 
 /// Opens the weekday chips in a dialog. Returns null if dismissed.
 Future<int?> showDayPickerDialog(BuildContext context, int mask) {
+  final l10n = AppLocalizations.of(context);
+  final presets = _dayPresets(l10n);
+
   return showDialog<int>(
     context: context,
     builder: (ctx) {
       var local = mask;
       return StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Repeat on'),
+          title: Text(l10n.repeatOn),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -124,21 +136,20 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  describeDays(local),
+                  describeDays(l10n, local),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.onSurfaceVariant),
                 ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    for (var i = 0; i < _dayPresets.length; i++) ...[
+                    for (var i = 0; i < presets.length; i++) ...[
                       if (i > 0) const SizedBox(width: 8),
                       Expanded(
                         child: _PresetChip(
-                          label: _dayPresets[i].label,
-                          selected: local == _dayPresets[i].mask,
-                          onTap: () =>
-                              setLocal(() => local = _dayPresets[i].mask),
+                          label: presets[i].label,
+                          selected: local == presets[i].mask,
+                          onTap: () => setLocal(() => local = presets[i].mask),
                         ),
                       ),
                     ],
@@ -150,7 +161,7 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(l10n.actionCancel),
             ),
             // "OK" rather than "Done", which on the run screens means
             // completing a step.

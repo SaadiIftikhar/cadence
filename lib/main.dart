@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'data/app_prefs.dart';
 import 'data/housekeeping.dart';
 import 'data/providers.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/alarm_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -122,10 +123,12 @@ class _StepReminderAppState extends ConsumerState<StepReminderApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Cadence',
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
       debugShowCheckedModeBanner: false,
       navigatorKey: _navigatorKey,
       theme: buildAppTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: _seenOnboarding
           ? const HomeShell()
           : OnboardingScreen(onFinished: _finishOnboarding),

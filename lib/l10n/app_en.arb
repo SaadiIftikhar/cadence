@@ -1,0 +1,185 @@
+{
+  "@@locale": "en",
+
+  "appName": "Cadence",
+  "appTagline": "Reminders with steps, icons and timers",
+
+  "navHome": "Home",
+  "navCalendar": "Calendar",
+  "navSettings": "Settings",
+
+  "actionCancel": "Cancel",
+  "actionDelete": "Delete",
+  "actionEdit": "Edit",
+  "actionSave": "Save",
+  "actionAdd": "Add",
+  "actionReplace": "Replace",
+  "actionReset": "Reset",
+  "actionDone": "Done",
+  "actionStart": "Start",
+  "actionPause": "Pause",
+  "actionDismiss": "Dismiss",
+  "actionGotIt": "Got it",
+  "actionGrant": "Grant",
+  "actionSkip": "Skip",
+  "actionNotNow": "Not now",
+  "actionSearch": "Search",
+  "actionContinue": "Continue",
+
+  "addReminderButton": "Add",
+  "addRoutine": "Add a routine",
+  "addStepMenuItem": "Add a step",
+
+  "loadErrorTitle": "Could not load your reminders",
+  "loadErrorMessage": "Restarting the app usually clears this.",
+  "emptyHomeTitle": "No reminders yet",
+  "emptyHomeMessage": "Tap + to create one.",
+  "untitledReminder": "Untitled reminder",
+  "untitledStep": "Untitled step",
+
+  "deleteReminderTitle": "Delete reminder?",
+  "deleteReminderMessage": "This reminder and its steps will be removed.",
+  "deleteReminderNamedMessage": "\"{title}\" and its steps will be removed.",
+  "@deleteReminderNamedMessage": {
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "turnOff": "Turn off",
+  "turnOn": "Turn on",
+
+  "calendarNothingTitle": "Nothing scheduled",
+  "calendarNothingMessage": "No reminders repeat on this day.",
+
+  "newRoutine": "New routine",
+  "editRoutine": "Edit routine",
+  "newStep": "New step",
+  "editStep": "Edit step",
+  "routineName": "Routine name",
+  "stepTitle": "Step title",
+  "fieldTime": "Time",
+  "setTime": "Set time",
+  "fieldRepeat": "Repeat",
+  "switchNotifications": "Notifications",
+  "switchAlarm": "Alarm",
+  "switchAddImage": "Add image",
+  "cropImage": "Crop image",
+  "noStepsYet": "No steps yet.",
+  "reorderHint": "Press and hold a step to reorder",
+  "addStep": "Add step",
+  "saveStep": "Save step",
+  "deleteStep": "Delete step",
+  "changeStepIcon": "Change step icon",
+  "chooseIcon": "Choose icon",
+  "iconHint": "Tap the icon to change it",
+  "timeHint": "Where a card sits on the home screen depends on its time",
+
+  "notificationsBlockedToast": "Notifications are blocked — enable them in system settings.",
+  "exactAlarmsOffToast": "Exact alarms are off; reminders may fire late.",
+  "stillBlockedToast": "Still blocked — you can change it in system settings.",
+
+  "stepTimer": "Step timer",
+  "timerNone": "None",
+  "noTimer": "No timer",
+  "hours": "Hours",
+  "minutes": "Minutes",
+  "seconds": "Seconds",
+  "backToFullTime": "Back to full time",
+  "timerFinished": "Timer finished",
+
+  "repeatOn": "Repeat on",
+  "repeatTodayOnly": "Today only",
+  "repeatEveryDay": "Every day",
+  "repeatWeekdays": "Weekdays",
+  "repeatWeekend": "Weekend",
+  "dayMon": "Mon",
+  "dayTue": "Tue",
+  "dayWed": "Wed",
+  "dayThu": "Thu",
+  "dayFri": "Fri",
+  "daySat": "Sat",
+  "daySun": "Sun",
+
+  "markRoutineDoneTitle": "Mark the whole routine as done?",
+  "markRoutineDoneMessage": "Every step will be ticked off, including any you have not run. To leave without changing anything, go back instead.",
+  "markDone": "Mark done",
+  "resetRoutineTitle": "Reset this routine?",
+  "resetRoutineMessage": "Every step will go back to not done, including ones you already finished. This cannot be undone.",
+  "stepsLoadErrorTitle": "Could not load these steps",
+  "nothingToRunTitle": "Nothing to run",
+  "nothingToRunMessage": "This reminder has no steps yet.",
+  "stepFallback": "Step",
+  "reminderFallback": "Reminder",
+
+  "progressDone": "{done} of {total} done",
+  "@progressDone": {
+    "placeholders": {
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "stepNumber": "Step {number}",
+  "@stepNumber": {
+    "placeholders": {
+      "number": { "type": "int" }
+    }
+  },
+
+  "iconSearchEmpty": "No icons match that search.",
+
+  "onboardOneStepTitle": "One step, or a whole routine",
+  "onboardOneStepBody": "Save a single thing to do, or build a routine of steps and work through them one at a time. Give any of them their own icon and a countdown.",
+  "onboardPrivacyTitle": "Everything stays on your phone",
+  "onboardPrivacyBody": "No account, no sync, no servers. This app has no internet access at all, so what you write here has nowhere else to go.",
+  "onboardRemindTitle": "So it can actually remind you",
+  "onboardRemindBody": "Reminders arrive as notifications at the time you pick, or as a full-screen alarm when something really matters.",
+  "allowNotifications": "Allow notifications",
+  "onboardPageOf": "Page {page} of {count}",
+  "@onboardPageOf": {
+    "placeholders": {
+      "page": { "type": "int" },
+      "count": { "type": "int" }
+    }
+  },
+
+  "sectionPermissions": "Permissions",
+  "permissionsRow": "Notifications and alarms",
+  "permissionsChecking": "Checking…",
+  "permissionsAllowed": "Notifications and exact alarms allowed",
+  "permissionsBlocked": "Notifications are blocked",
+  "permissionsExactBlocked": "Exact alarms blocked — reminders may fire late",
+
+  "sectionBackup": "Backup",
+  "sectionAbout": "About",
+  "exportTitle": "Export",
+  "exportSubtitle": "Save your reminders to a file",
+  "importTitle": "Import",
+  "importSubtitle": "Bring reminders in from a backup file",
+  "saveBackupDialog": "Save backup",
+  "chooseBackupDialog": "Choose a backup",
+  "backupSaved": "Backup saved.",
+  "backupSaveFailed": "Could not save the backup.",
+  "backupReadFailed": "Could not read that file.",
+  "importDialogTitle": "Import backup",
+  "importedCount": "{count, plural, =1{Imported 1 reminder} other{Imported {count} reminders}}",
+  "@importedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "importDialogMessage": "{count, plural, =1{You already have 1 reminder. Keep it and add the backup alongside, or replace everything with what is in the file?} other{You already have {count} reminders. Keep them and add the backup alongside, or replace everything with what is in the file?}}",
+  "@importDialogMessage": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "backupNotABackup": "That file is not a backup.",
+  "backupWrongApp": "That backup was made by a different app.",
+  "backupNewerVersion": "That backup was made by a newer version of this app.",
+  "backupNoReminders": "That backup has no reminders in it.",
+  "backupDamaged": "That backup is damaged.",
+  "backupStepless": "A reminder in that backup has no steps.",
+  "backupZipUnreadable": "That zip could not be opened.",
+  "backupZipNotABackup": "That zip is not a backup."
+}

@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/database.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
@@ -79,7 +80,7 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen> {
   Widget build(BuildContext context) {
     final reminder = _reminder;
     final title = reminder == null || reminder.title.trim().isEmpty
-        ? 'Reminder'
+        ? AppLocalizations.of(context).reminderFallback
         : reminder.title.trim();
     final time = reminder == null
         ? ''
@@ -134,13 +135,13 @@ class _AlarmScreenState extends ConsumerState<AlarmScreen> {
                     FilledButton.icon(
                       onPressed: _start,
                       icon: const Icon(Symbols.play_arrow, size: 26),
-                      label: const Text('Start'),
+                      label: Text(AppLocalizations.of(context).actionStart),
                     ),
                     const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: _dismiss,
                       icon: const Icon(Symbols.alarm_off, size: 24),
-                      label: const Text('Dismiss'),
+                      label: Text(AppLocalizations.of(context).actionDismiss),
                     ),
                   ],
                 ),

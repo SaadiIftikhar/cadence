@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../data/database.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 import '../widgets/empty_state.dart';
@@ -72,19 +73,16 @@ class RunReminderScreen extends ConsumerWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Mark the whole routine as done?'),
-        content: const Text(
-          'Every step will be ticked off, including any you have not run. '
-          'To leave without changing anything, go back instead.',
-        ),
+        title: Text(AppLocalizations.of(context).markRoutineDoneTitle),
+        content: Text(AppLocalizations.of(context).markRoutineDoneMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Mark done'),
+            child: Text(AppLocalizations.of(context).markDone),
           ),
         ],
       ),
@@ -104,20 +102,17 @@ class RunReminderScreen extends ConsumerWidget {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Reset this routine?'),
-        content: const Text(
-          'Every step will go back to not done, including ones you already '
-          'finished. This cannot be undone.',
-        ),
+        title: Text(AppLocalizations.of(context).resetRoutineTitle),
+        content: Text(AppLocalizations.of(context).resetRoutineMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Reset',
-                style: TextStyle(color: AppColors.danger)),
+            child: Text(AppLocalizations.of(context).actionReset,
+                style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -140,10 +135,10 @@ class RunReminderScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: const EmptyState(
+        body: EmptyState(
           icon: Symbols.error,
-          title: 'Could not load these steps',
-          message: 'Restarting the app usually clears this.',
+          title: AppLocalizations.of(context).stepsLoadErrorTitle,
+          message: AppLocalizations.of(context).loadErrorMessage,
         ),
       ),
       data: (items) {
@@ -155,10 +150,10 @@ class RunReminderScreen extends ConsumerWidget {
                 onPressed: () => Navigator.pop(context),
               ),
             ),
-            body: const EmptyState(
+            body: EmptyState(
               icon: Symbols.checklist,
-              title: 'Nothing to run',
-              message: 'This reminder has no steps yet.',
+              title: AppLocalizations.of(context).nothingToRunTitle,
+              message: AppLocalizations.of(context).nothingToRunMessage,
             ),
           );
         }
@@ -174,7 +169,7 @@ class RunReminderScreen extends ConsumerWidget {
               icon: const Icon(Symbols.arrow_back),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text('$doneCount of ${items.length} done'),
+            title: Text(AppLocalizations.of(context).progressDone(doneCount, items.length)),
           ),
           body: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -184,7 +179,7 @@ class RunReminderScreen extends ConsumerWidget {
               final step = items[i];
               return PillTile(
                 label: step.title.trim().isEmpty
-                    ? 'Step ${i + 1}'
+                    ? AppLocalizations.of(context).stepNumber(i + 1)
                     : step.title.trim(),
                 iconKey: step.iconKey,
                 dimmed: step.completed,
@@ -212,7 +207,7 @@ class RunReminderScreen extends ConsumerWidget {
                                   .setAllCompleted(reminderId, false);
                             },
                       icon: const Icon(Symbols.refresh, size: 24),
-                      label: const Text('Reset'),
+                      label: Text(AppLocalizations.of(context).actionReset),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -241,7 +236,7 @@ class RunReminderScreen extends ConsumerWidget {
                         size: 24,
                         color: allDone ? AppColors.success : null,
                       ),
-                      label: const Text('Done'),
+                      label: Text(AppLocalizations.of(context).actionDone),
                     ),
                   ),
                 ],

@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:step_reminder/l10n/app_localizations.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:step_reminder/data/database.dart';
 import 'package:step_reminder/data/providers.dart';
@@ -85,6 +86,8 @@ void main() {
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
         child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
           theme: buildAppTheme(),
           home: RunReminderScreen(reminderId: reminderId),
         ),

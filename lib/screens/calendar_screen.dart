@@ -6,6 +6,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../data/database.dart';
 import '../data/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/pill_tile.dart';
@@ -30,10 +31,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return reminders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (_, _) => const EmptyState(
+      error: (_, _) => EmptyState(
         icon: Symbols.error,
-        title: 'Could not load your reminders',
-        message: 'Restarting the app usually clears this.',
+        title: AppLocalizations.of(context).loadErrorTitle,
+        message: AppLocalizations.of(context).loadErrorMessage,
       ),
       data: (all) {
         final forDay = remindersOnDay(all, _selected);
@@ -119,10 +120,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(height: 14),
             if (forDay.isEmpty)
-              const EmptyState(
+              EmptyState(
                 icon: Symbols.event_busy,
-                title: 'Nothing scheduled',
-                message: 'No reminders repeat on this day.',
+                title: AppLocalizations.of(context).calendarNothingTitle,
+                message: AppLocalizations.of(context).calendarNothingMessage,
               )
             else
               for (final r in forDay)
@@ -130,7 +131,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: PillTile(
                     label: r.title.trim().isEmpty
-                        ? 'Untitled reminder'
+                        ? AppLocalizations.of(context).untitledReminder
                         : r.title.trim(),
                     iconKey: r.iconKey,
                     trailing: Text(

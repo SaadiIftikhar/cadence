@@ -157,7 +157,8 @@ class BackupService {
       try {
         return (utf8.decode(bytes), const {});
       } on FormatException {
-        throw const BackupFormatException('That file is not a backup.');
+        throw const BackupFormatException(
+          BackupProblem.notABackup, 'That file is not a backup.');
       }
     }
 
@@ -165,7 +166,8 @@ class BackupService {
     try {
       archive = ZipDecoder().decodeBytes(bytes);
     } catch (_) {
-      throw const BackupFormatException('That zip could not be opened.');
+      throw const BackupFormatException(
+          BackupProblem.zipUnreadable, 'That zip could not be opened.');
     }
 
     String? manifest;
@@ -181,7 +183,8 @@ class BackupService {
     }
 
     if (manifest == null) {
-      throw const BackupFormatException('That zip is not a backup.');
+      throw const BackupFormatException(
+          BackupProblem.zipNotABackup, 'That zip is not a backup.');
     }
     return (manifest, images);
   }

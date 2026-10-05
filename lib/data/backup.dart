@@ -1,9 +1,27 @@
 import 'dart:convert';
 
 /// Raised when a file is not a backup this app can read.
-class BackupFormatException implements Exception {
-  const BackupFormatException(this.message);
+/// Why a backup could not be read.
+///
+/// The data layer has no way to reach the user's language, so it names the
+/// problem and leaves the wording to whoever is showing it.
+enum BackupProblem {
+  notABackup,
+  wrongApp,
+  newerVersion,
+  noReminders,
+  damaged,
+  stepless,
+  zipUnreadable,
+  zipNotABackup,
+}
 
+class BackupFormatException implements Exception {
+  const BackupFormatException(this.problem, this.message);
+
+  final BackupProblem problem;
+
+  /// Plain English, for logs and for anything that cannot localise.
   final String message;
 
   @override
@@ -99,31 +117,35 @@ class Backup {
     try {
       parsed = jsonDecode(source);
     } on FormatException {
-      throw const BackupFormatException('That file is not a backup.');
+      throw const BackupFormatException(
+          BackupProblem.notABackup, 'That file is not a backup.');
     }
 
     if (parsed is! Map<String, dynamic>) {
-      throw const BackupFormatException('That file is not a backup.');
+      throw const BackupFormatException(
+          BackupProblem.notABackup, 'That file is not a backup.');
     }
     if (parsed['app'] != _appTag) {
       throw const BackupFormatException(
+        BackupProblem.wrongApp,
         'That backup was made by a different app.',
       );
     }
 
     final format = parsed['format'];
     if (format is! int) {
-      throw const BackupFormatException('That file is not a backup.');
+      throw const BackupFormatException(
+          BackupProblem.notABackup, 'That file is not a backup.');
     }
     if (format > formatVersion) {
-      throw const BackupFormatException(
-        'That backup was made by a newer version of this app.',
-      );
+      throw const BackupFormatException(BackupProblem.newerVersion,
+          'That backup was made by a newer version of this app.');
     }
 
     final raw = parsed['reminders'];
     if (raw is! List) {
-      throw const BackupFormatException('That backup has no reminders in it.');
+      throw const BackupFormatException(
+          BackupProblem.noReminders, 'That backup has no reminders in it.');
     }
 
     return [for (final entry in raw) _reminder(entry)];
@@ -131,12 +153,14 @@ class Backup {
 
   static ReminderBackup _reminder(Object? entry) {
     if (entry is! Map<String, dynamic>) {
-      throw const BackupFormatException('That backup is damaged.');
+      throw const BackupFormatException(
+          BackupProblem.damaged, 'That backup is damaged.');
     }
 
     final steps = entry['steps'];
     if (steps is! List) {
-      throw const BackupFormatException('A reminder in that backup has no steps.');
+      throw const BackupFormatException(
+          BackupProblem.stepless, 'A reminder in that backup has no steps.');
     }
 
     return ReminderBackup(
@@ -156,7 +180,8 @@ class Backup {
 
   static StepBackup _step(Object? entry) {
     if (entry is! Map<String, dynamic>) {
-      throw const BackupFormatException('That backup is damaged.');
+      throw const BackupFormatException(
+          BackupProblem.damaged, 'That backup is damaged.');
     }
     final timer = entry['timerSeconds'];
     return StepBackup(

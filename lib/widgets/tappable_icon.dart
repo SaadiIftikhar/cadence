@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 
@@ -12,14 +13,17 @@ class TappableIcon extends StatelessWidget {
     super.key,
     required this.iconKey,
     required this.onTap,
-    this.semanticLabel = 'Choose icon',
+    this.semanticLabel,
     this.size = 26,
     this.color,
   });
 
   final String? iconKey;
   final VoidCallback onTap;
-  final String semanticLabel;
+
+  /// Falls back to "Choose icon", which is what tapping one does everywhere
+  /// except the step rows, where it retargets that step's own icon.
+  final String? semanticLabel;
   final double size;
   final Color? color;
 
@@ -37,7 +41,8 @@ class TappableIcon extends StatelessWidget {
             IconCatalog.resolve(iconKey),
             size: size,
             color: color ?? AppColors.onSurface,
-            semanticLabel: semanticLabel,
+            semanticLabel:
+                semanticLabel ?? AppLocalizations.of(context).chooseIcon,
           ),
         ),
       ),

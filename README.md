@@ -61,6 +61,10 @@ and `key.properties` are gitignored.
 - `lib/widgets/` — the shared pieces: pill tiles, segmented progress outlines,
   the timer pill, hint callouts.
 - `lib/services/` — notification scheduling and the timer chime.
+- `lib/l10n/` — every user-facing string, in `app_en.arb`. Nothing in the UI
+  holds its own copy, so adding a language is a matter of adding one `.arb`
+  file. The data layer names failures with an enum rather than a sentence, so
+  it never has to reach for a language it cannot see.
 - `android/app/src/main/kotlin/` — a single method channel, which lets the alarm
   screen show over the keyguard only while an alarm is actually ringing.
 

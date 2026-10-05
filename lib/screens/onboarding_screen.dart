@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class _Page {
@@ -15,27 +16,27 @@ class _Page {
   final String body;
 }
 
-const _pages = <_Page>[
-  _Page(
-    icon: Symbols.checklist,
-    title: 'One step, or a whole routine',
-    body: 'Save a single thing to do, or build a routine of steps and work '
-        'through them one at a time. Give any of them their own icon and a '
-        'countdown.',
-  ),
-  _Page(
-    icon: Symbols.lock,
-    title: 'Everything stays on your phone',
-    body: 'No account, no sync, no servers. This app has no internet access '
-        'at all, so what you write here has nowhere else to go.',
-  ),
-  _Page(
-    icon: Symbols.notifications_active,
-    title: 'So it can actually remind you',
-    body: 'Reminders arrive as notifications at the time you pick, or as a '
-        'full-screen alarm when something really matters.',
-  ),
-];
+List<_Page> _pagesFor(AppLocalizations l10n) => [
+      _Page(
+        icon: Symbols.checklist,
+        title: l10n.onboardOneStepTitle,
+        body: l10n.onboardOneStepBody,
+      ),
+      _Page(
+        icon: Symbols.lock,
+        title: l10n.onboardPrivacyTitle,
+        body: l10n.onboardPrivacyBody,
+      ),
+      _Page(
+        icon: Symbols.notifications_active,
+        title: l10n.onboardRemindTitle,
+        body: l10n.onboardRemindBody,
+      ),
+    ];
+
+/// How many pages the introduction has. Fixed, so the last-page check does not
+/// need the strings loaded to answer.
+const _pageCount = 3;
 
 /// First-run introduction.
 ///
@@ -58,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _index = 0;
 
-  bool get _isLast => _index == _pages.length - 1;
+  bool get _isLast => _index == _pageCount - 1;
 
   @override
   void dispose() {
@@ -74,6 +75,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final pages = _pagesFor(l10n);
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -88,20 +92,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPressed: _isLast
                       ? null
                       : () => widget.onFinished(allowNotifications: false),
-                  child: const Text('Skip'),
+                  child: Text(l10n.actionSkip),
                 ),
               ),
             ),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
-                itemCount: _pages.length,
+                itemCount: pages.length,
                 onPageChanged: (i) => setState(() => _index = i),
-                itemBuilder: (context, i) => _PageView(page: _pages[i]),
+                itemBuilder: (context, i) => _PageView(page: pages[i]),
               ),
             ),
             _Dots(
-              count: _pages.length,
+              count: pages.length,
               index: _index,
               onTap: _goTo,
             ),
@@ -114,7 +118,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onPressed: () => _isLast
                       ? widget.onFinished(allowNotifications: true)
                       : _goTo(_index + 1),
-                  child: Text(_isLast ? 'Allow notifications' : 'Continue'),
+                  child: Text(
+                      _isLast ? l10n.allowNotifications : l10n.actionContinue),
                 ),
               ),
             ),
@@ -124,7 +129,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ? TextButton(
                       onPressed: () =>
                           widget.onFinished(allowNotifications: false),
-                      child: const Text('Not now'),
+                      child: Text(l10n.actionNotNow),
                     )
                   : null,
             ),
@@ -202,7 +207,7 @@ class _Dots extends StatelessWidget {
       children: [
         for (var i = 0; i < count; i++)
           Semantics(
-            label: 'Page ${i + 1} of $count',
+            label: AppLocalizations.of(context).onboardPageOf(i + 1, count),
             selected: i == index,
             button: true,
             child: InkResponse(

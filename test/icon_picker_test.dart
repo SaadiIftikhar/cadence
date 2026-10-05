@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:step_reminder/l10n/app_localizations.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:step_reminder/screens/icon_picker_screen.dart';
 import 'package:step_reminder/theme/app_theme.dart';
@@ -10,6 +11,8 @@ void main() {
     String? picked;
     await tester.pumpWidget(
       MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
         theme: buildAppTheme(),
         home: Builder(
           builder: (context) => Scaffold(
