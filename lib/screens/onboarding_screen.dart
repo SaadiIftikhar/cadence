@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 
 class _Page {
@@ -86,13 +88,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.centerRight,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, 8, 12, 0),
-                child: TextButton(
-                  // Skip stays put rather than vanishing on the last page, so
-                  // it never swaps places with something else under a thumb.
-                  onPressed: _isLast
-                      ? null
-                      : () => widget.onFinished(allowNotifications: false),
-                  child: Text(l10n.actionSkip),
+                child: TestId(
+                  TestIds.onboardingSkip,
+                  child: TextButton(
+                    // Skip stays put rather than vanishing on the last page, so
+                    // it never swaps places with something else under a thumb.
+                    onPressed: _isLast
+                        ? null
+                        : () => widget.onFinished(allowNotifications: false),
+                    child: Text(l10n.actionSkip),
+                  ),
                 ),
               ),
             ),
@@ -114,22 +119,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: const EdgeInsets.fromLTRB(32, 0, 32, 12),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => _isLast
-                      ? widget.onFinished(allowNotifications: true)
-                      : _goTo(_index + 1),
-                  child: Text(
-                      _isLast ? l10n.allowNotifications : l10n.actionContinue),
+                child: TestId(
+                  TestIds.onboardingPrimary,
+                  child: FilledButton(
+                    onPressed: () => _isLast
+                        ? widget.onFinished(allowNotifications: true)
+                        : _goTo(_index + 1),
+                    child: Text(
+                        _isLast ? l10n.allowNotifications : l10n.actionContinue),
+                  ),
                 ),
               ),
             ),
             SizedBox(
               height: 48,
               child: _isLast
-                  ? TextButton(
-                      onPressed: () =>
-                          widget.onFinished(allowNotifications: false),
-                      child: Text(l10n.actionNotNow),
+                  ? TestId(
+                      TestIds.onboardingNotNow,
+                      child: TextButton(
+                        onPressed: () =>
+                            widget.onFinished(allowNotifications: false),
+                        child: Text(l10n.actionNotNow),
+                      ),
                     )
                   : null,
             ),
@@ -162,14 +173,17 @@ class _PageView extends StatelessWidget {
             child: Icon(page.icon, size: 72, color: AppColors.primary),
           ),
           const SizedBox(height: 44),
-          Text(
-            page.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 27,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
+          TestId(
+            TestIds.onboardingTitle,
+            child: Text(
+              page.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 27,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurface,
+              ),
             ),
           ),
           const SizedBox(height: 18),
@@ -207,6 +221,7 @@ class _Dots extends StatelessWidget {
       children: [
         for (var i = 0; i < count; i++)
           Semantics(
+            identifier: TestIds.onboardingDot(i + 1),
             label: AppLocalizations.of(context).onboardPageOf(i + 1, count),
             selected: i == index,
             button: true,

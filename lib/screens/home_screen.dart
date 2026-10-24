@@ -7,6 +7,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/anchored_menu.dart';
@@ -42,11 +44,13 @@ class _HomeShellState extends State<HomeShell> {
           icon: Symbols.format_list_numbered,
           label: AppLocalizations.of(context).addRoutine,
           value: true,
+          testId: TestIds.menuAddRoutine,
         ),
         MenuAction(
           icon: Symbols.check_circle,
           label: AppLocalizations.of(context).addStepMenuItem,
           value: false,
+          testId: TestIds.menuAddStep,
         ),
       ],
     );
@@ -83,17 +87,20 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ),
         floatingActionButton: _index == 0
-            ? FloatingActionButton(
-                key: _fabKey,
-                onPressed: _showAddMenu,
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.onPrimary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+            ? TestId(
+                TestIds.homeAddButton,
+                child: FloatingActionButton(
+                  key: _fabKey,
+                  onPressed: _showAddMenu,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.onPrimary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Icon(Symbols.add,
+                      size: 30, semanticLabel: AppLocalizations.of(context).addReminderButton),
                 ),
-                child: Icon(Symbols.add,
-                    size: 30, semanticLabel: AppLocalizations.of(context).addReminderButton),
               )
             : null,
         bottomNavigationBar:
@@ -125,18 +132,21 @@ class _BottomBar extends StatelessWidget {
             _NavItem(
               icon: Symbols.home,
               label: AppLocalizations.of(context).navHome,
+              testId: TestIds.navHome,
               selected: index == 0,
               onTap: () => onSelected(0),
             ),
             _NavItem(
               icon: Symbols.calendar_month,
               label: AppLocalizations.of(context).navCalendar,
+              testId: TestIds.navCalendar,
               selected: index == 1,
               onTap: () => onSelected(1),
             ),
             _NavItem(
               icon: Symbols.settings,
               label: AppLocalizations.of(context).navSettings,
+              testId: TestIds.navSettings,
               selected: index == 2,
               onTap: () => onSelected(2),
             ),
@@ -153,44 +163,49 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.testId,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final String testId;
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 6),
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
+      child: TestId(
+        testId,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 6),
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: selected ? AppColors.onPrimary : AppColors.onSurface,
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 26,
-                color: selected ? AppColors.onPrimary : AppColors.onSurface,
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                  color: AppColors.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                color: AppColors.onSurface,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -220,10 +235,13 @@ class ReminderListView extends ConsumerWidget {
         final items =
             orderedForHome(withoutLapsedOneOffs(all, DateTime.now()), progress);
         if (items.isEmpty) {
-          return EmptyState(
-            icon: Symbols.alarm_add,
-            title: AppLocalizations.of(context).emptyHomeTitle,
-            message: AppLocalizations.of(context).emptyHomeMessage,
+          return TestId(
+            TestIds.homeEmpty,
+            child: EmptyState(
+              icon: Symbols.alarm_add,
+              title: AppLocalizations.of(context).emptyHomeTitle,
+              message: AppLocalizations.of(context).emptyHomeMessage,
+            ),
           );
         }
         return ListView.separated(
@@ -290,14 +308,20 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
               : AppLocalizations.of(context).deleteReminderNamedMessage(widget.reminder.title),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context).actionCancel),
+          TestId(
+            TestIds.dialogCancel,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(AppLocalizations.of(context).actionCancel),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(context).actionDelete,
-                style: const TextStyle(color: AppColors.danger)),
+          TestId(
+            TestIds.dialogConfirm,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(AppLocalizations.of(context).actionDelete,
+                  style: const TextStyle(color: AppColors.danger)),
+            ),
           ),
         ],
       ),
@@ -314,19 +338,21 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
       anchorKey: _anchor,
       preferAbove: false,
       actions: [
-        MenuAction(icon: Symbols.edit, label: AppLocalizations.of(context).actionEdit, value: 'edit'),
+        MenuAction(icon: Symbols.edit, label: AppLocalizations.of(context).actionEdit, value: 'edit', testId: TestIds.menuEdit),
         reminder.enabled
             ? MenuAction(
                 icon: Symbols.notifications_off,
                 label: AppLocalizations.of(context).turnOff,
                 value: 'toggle',
+                testId: TestIds.menuToggle,
               )
             : MenuAction(
                 icon: Symbols.notifications_active,
                 label: AppLocalizations.of(context).turnOn,
                 value: 'toggle',
+                testId: TestIds.menuToggle,
               ),
-        MenuAction(icon: Symbols.delete, label: AppLocalizations.of(context).actionDelete, value: 'delete'),
+        MenuAction(icon: Symbols.delete, label: AppLocalizations.of(context).actionDelete, value: 'delete', testId: TestIds.menuDelete),
       ],
     );
 
@@ -352,28 +378,34 @@ class _ReminderEntryState extends ConsumerState<_ReminderEntry> {
     return KeyedSubtree(
       key: _anchor,
       child: r.imagePath == null
-          ? PillTile(
-              label: title,
-              subtitle: subtitle,
-              iconKey: r.iconKey,
-              dimmed: !r.enabled,
-              onTap: _open,
-              onLongPress: _showActions,
-              progress:
-                  p.isRoutine ? (done: p.done, total: p.total) : null,
-              // A single step has no segments, so the whole outline carries
-              // the completed state instead.
-              outlineColor:
-                  !p.isRoutine && p.allDone ? AppColors.success : null,
-              trailing: p.isRoutine ? _ProgressBadge(progress: p) : null,
+          ? TestId(
+              TestIds.reminderCard,
+              child: PillTile(
+                label: title,
+                subtitle: subtitle,
+                iconKey: r.iconKey,
+                dimmed: !r.enabled,
+                onTap: _open,
+                onLongPress: _showActions,
+                progress:
+                    p.isRoutine ? (done: p.done, total: p.total) : null,
+                // A single step has no segments, so the whole outline carries
+                // the completed state instead.
+                outlineColor:
+                    !p.isRoutine && p.allDone ? AppColors.success : null,
+                trailing: p.isRoutine ? _ProgressBadge(progress: p) : null,
+              ),
             )
-          : _ImageCard(
-              reminder: r,
-              title: title,
-              subtitle: subtitle,
-              progress: p,
-              onTap: _open,
-              onLongPress: _showActions,
+          : TestId(
+              TestIds.reminderCard,
+              child: _ImageCard(
+                reminder: r,
+                title: title,
+                subtitle: subtitle,
+                progress: p,
+                onTap: _open,
+                onLongPress: _showActions,
+              ),
             ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 
 /// A stadium row that names a setting and shows its current value.
@@ -135,10 +137,13 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
                   onChanged: (m) => setLocal(() => local = m),
                 ),
                 const SizedBox(height: 18),
-                Text(
-                  describeDays(l10n, local),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.onSurfaceVariant),
+                TestId(
+                  TestIds.repeatSummary,
+                  child: Text(
+                    describeDays(l10n, local),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.onSurfaceVariant),
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Row(
@@ -146,10 +151,13 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
                     for (var i = 0; i < presets.length; i++) ...[
                       if (i > 0) const SizedBox(width: 8),
                       Expanded(
-                        child: _PresetChip(
-                          label: presets[i].label,
-                          selected: local == presets[i].mask,
-                          onTap: () => setLocal(() => local = presets[i].mask),
+                        child: TestId(
+                          TestIds.repeatPreset(presets[i].mask),
+                          child: _PresetChip(
+                            label: presets[i].label,
+                            selected: local == presets[i].mask,
+                            onTap: () => setLocal(() => local = presets[i].mask),
+                          ),
                         ),
                       ),
                     ],
@@ -159,15 +167,21 @@ Future<int?> showDayPickerDialog(BuildContext context, int mask) {
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.actionCancel),
+            TestId(
+              TestIds.repeatCancel,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.actionCancel),
+              ),
             ),
             // "OK" rather than "Done", which on the run screens means
             // completing a step.
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, local),
-              child: const Text('OK'),
+            TestId(
+              TestIds.repeatOk,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx, local),
+                child: const Text('OK'),
+              ),
             ),
           ],
         ),
@@ -234,15 +248,18 @@ class DaySelector extends StatelessWidget {
         for (var i = 0; i < 7; i++) ...[
           if (i > 0) const SizedBox(width: 7),
           Expanded(
-            child: _DayChip(
-              label: _labels[i],
-              selected: mask & (1 << i) != 0,
-              // Outer edges of the group are rounder, matching the mockup.
-              borderRadius: BorderRadius.horizontal(
-                left: Radius.circular(i == 0 ? 24 : 10),
-                right: Radius.circular(i == 6 ? 24 : 10),
+            child: TestId(
+              TestIds.repeatDay(i),
+              child: _DayChip(
+                label: _labels[i],
+                selected: mask & (1 << i) != 0,
+                // Outer edges of the group are rounder, matching the mockup.
+                borderRadius: BorderRadius.horizontal(
+                  left: Radius.circular(i == 0 ? 24 : 10),
+                  right: Radius.circular(i == 6 ? 24 : 10),
+                ),
+                onTap: () => onChanged(mask ^ (1 << i)),
               ),
-              onTap: () => onChanged(mask ^ (1 << i)),
             ),
           ),
         ],

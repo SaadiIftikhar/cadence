@@ -5,6 +5,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 import '../widgets/empty_state.dart';
@@ -76,13 +78,19 @@ class RunReminderScreen extends ConsumerWidget {
         title: Text(AppLocalizations.of(context).markRoutineDoneTitle),
         content: Text(AppLocalizations.of(context).markRoutineDoneMessage),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context).actionCancel),
+          TestId(
+            TestIds.dialogCancel,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(AppLocalizations.of(context).actionCancel),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(context).markDone),
+          TestId(
+            TestIds.dialogConfirm,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(AppLocalizations.of(context).markDone),
+            ),
           ),
         ],
       ),
@@ -105,14 +113,20 @@ class RunReminderScreen extends ConsumerWidget {
         title: Text(AppLocalizations.of(context).resetRoutineTitle),
         content: Text(AppLocalizations.of(context).resetRoutineMessage),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocalizations.of(context).actionCancel),
+          TestId(
+            TestIds.dialogCancel,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(AppLocalizations.of(context).actionCancel),
+            ),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(AppLocalizations.of(context).actionReset,
-                style: const TextStyle(color: AppColors.danger)),
+          TestId(
+            TestIds.dialogConfirm,
+            child: TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(AppLocalizations.of(context).actionReset,
+                  style: const TextStyle(color: AppColors.danger)),
+            ),
           ),
         ],
       ),
@@ -169,7 +183,10 @@ class RunReminderScreen extends ConsumerWidget {
               icon: const Icon(Symbols.arrow_back),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(AppLocalizations.of(context).progressDone(doneCount, items.length)),
+            title: TestId(
+              TestIds.routineProgress,
+              child: Text(AppLocalizations.of(context).progressDone(doneCount, items.length)),
+            ),
           ),
           body: ListView.separated(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -177,14 +194,17 @@ class RunReminderScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 14),
             itemBuilder: (context, i) {
               final step = items[i];
-              return PillTile(
-                label: step.title.trim().isEmpty
-                    ? AppLocalizations.of(context).stepNumber(i + 1)
-                    : step.title.trim(),
-                iconKey: step.iconKey,
-                dimmed: step.completed,
-                onTap: () => _runStep(context, step),
-                trailing: _StepTrailing(step: step),
+              return TestId(
+                TestIds.routineStepRow,
+                child: PillTile(
+                  label: step.title.trim().isEmpty
+                      ? AppLocalizations.of(context).stepNumber(i + 1)
+                      : step.title.trim(),
+                  iconKey: step.iconKey,
+                  dimmed: step.completed,
+                  onTap: () => _runStep(context, step),
+                  trailing: _StepTrailing(step: step),
+                ),
               );
             },
           ),
@@ -194,49 +214,55 @@ class RunReminderScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      // Confirmed: a routine can have far more to lose than a
-                      // single step, and a stray tap should not be able to
-                      // erase a morning's worth of ticks silently.
-                      onPressed: doneCount == 0
-                          ? null
-                          : () async {
-                              if (!await _confirmReset(context)) return;
-                              await ref
-                                  .read(repositoryProvider)
-                                  .setAllCompleted(reminderId, false);
-                            },
-                      icon: const Icon(Symbols.refresh, size: 24),
-                      label: Text(AppLocalizations.of(context).actionReset),
+                    child: TestId(
+                      TestIds.routineReset,
+                      child: OutlinedButton.icon(
+                        // Confirmed: a routine can have far more to lose than a
+                        // single step, and a stray tap should not be able to
+                        // erase a morning's worth of ticks silently.
+                        onPressed: doneCount == 0
+                            ? null
+                            : () async {
+                                if (!await _confirmReset(context)) return;
+                                await ref
+                                    .read(repositoryProvider)
+                                    .setAllCompleted(reminderId, false);
+                              },
+                        icon: const Icon(Symbols.refresh, size: 24),
+                        label: Text(AppLocalizations.of(context).actionReset),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      // Confirmed, because Done here ticks off steps the user
-                      // may not have run, and the wording is what teaches that
-                      // going back is the way to leave progress alone.
-                      //
-                      // Once every step is ticked there is nothing left for it
-                      // to do, so it goes quiet until Reset, keeping its green
-                      // tick to say why.
-                      onPressed: allDone
-                          ? null
-                          : () async {
-                              final navigator = Navigator.of(context);
-                              final confirmed = await _confirmDone(context);
-                              if (!confirmed) return;
-                              await ref
-                                  .read(repositoryProvider)
-                                  .setAllCompleted(reminderId, true);
-                              navigator.pop();
-                            },
-                      icon: Icon(
-                        Symbols.done_all,
-                        size: 24,
-                        color: allDone ? AppColors.success : null,
+                    child: TestId(
+                      TestIds.routineDone,
+                      child: OutlinedButton.icon(
+                        // Confirmed, because Done here ticks off steps the user
+                        // may not have run, and the wording is what teaches that
+                        // going back is the way to leave progress alone.
+                        //
+                        // Once every step is ticked there is nothing left for it
+                        // to do, so it goes quiet until Reset, keeping its green
+                        // tick to say why.
+                        onPressed: allDone
+                            ? null
+                            : () async {
+                                final navigator = Navigator.of(context);
+                                final confirmed = await _confirmDone(context);
+                                if (!confirmed) return;
+                                await ref
+                                    .read(repositoryProvider)
+                                    .setAllCompleted(reminderId, true);
+                                navigator.pop();
+                              },
+                        icon: Icon(
+                          Symbols.done_all,
+                          size: 24,
+                          color: allDone ? AppColors.success : null,
+                        ),
+                        label: Text(AppLocalizations.of(context).actionDone),
                       ),
-                      label: Text(AppLocalizations.of(context).actionDone),
                     ),
                   ),
                 ],

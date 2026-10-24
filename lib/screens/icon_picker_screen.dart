@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 
@@ -57,23 +59,30 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-            child: TextField(
-              controller: _controller,
-              onChanged: _search,
-              autofocus: false,
-              textInputAction: TextInputAction.search,
-              style: const TextStyle(fontSize: 19),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context).actionSearch,
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(left: 16, right: 12),
-                  child: Icon(Symbols.search, size: 26),
-                ),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 0, minHeight: 0),
-                suffixIcon: IconButton(
-                  icon: const Icon(Symbols.close, size: 26),
-                  onPressed: _clear,
+            child: TestId(
+              TestIds.iconSearchField,
+              merge: false,
+              child: TextField(
+                controller: _controller,
+                onChanged: _search,
+                autofocus: false,
+                textInputAction: TextInputAction.search,
+                style: const TextStyle(fontSize: 19),
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context).actionSearch,
+                  prefixIcon: const Padding(
+                    padding: EdgeInsets.only(left: 16, right: 12),
+                    child: Icon(Symbols.search, size: 26),
+                  ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 0, minHeight: 0),
+                  suffixIcon: TestId(
+                    TestIds.iconSearchClear,
+                    child: IconButton(
+                      icon: const Icon(Symbols.close, size: 26),
+                      onPressed: _clear,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -81,9 +90,12 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
           Expanded(
             child: _results.isEmpty
                 ? Center(
-                    child: Text(
-                      AppLocalizations.of(context).iconSearchEmpty,
-                      style: const TextStyle(color: AppColors.onSurfaceVariant),
+                    child: TestId(
+                      TestIds.iconEmpty,
+                      child: Text(
+                        AppLocalizations.of(context).iconSearchEmpty,
+                        style: const TextStyle(color: AppColors.onSurfaceVariant),
+                      ),
                     ),
                   )
                 : GridView.builder(
@@ -98,10 +110,13 @@ class _IconPickerScreenState extends State<IconPickerScreen> {
                     itemBuilder: (context, i) {
                       final name = _results[i];
                       final selected = name == widget.selected;
-                      return _IconCell(
-                        name: name,
-                        selected: selected,
-                        onTap: () => Navigator.pop(context, name),
+                      return TestId(
+                        TestIds.iconCell,
+                        child: _IconCell(
+                          name: name,
+                          selected: selected,
+                          onTap: () => Navigator.pop(context, name),
+                        ),
                       );
                     },
                   ),

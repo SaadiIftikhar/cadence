@@ -773,11 +773,15 @@ void main() {
                         anchorKey: key,
                         actions: const [
                           MenuAction(
-                              icon: Icons.edit, label: 'Edit', value: 'edit'),
+                              icon: Icons.edit,
+                              label: 'Edit',
+                              value: 'edit',
+                              testId: 'menu-edit'),
                           MenuAction(
                               icon: Icons.delete,
                               label: 'Delete',
-                              value: 'delete'),
+                              value: 'delete',
+                              testId: 'menu-delete'),
                         ],
                       ),
                     );

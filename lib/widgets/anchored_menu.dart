@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../testing/test_id.dart';
 import '../theme/app_theme.dart';
 
 class MenuAction<T> {
@@ -7,11 +8,15 @@ class MenuAction<T> {
     required this.icon,
     required this.label,
     required this.value,
+    required this.testId,
   });
 
   final IconData icon;
   final String label;
   final T value;
+
+  /// Automation id for this entry; see TestIds.
+  final String testId;
 }
 
 /// Shows [actions] as labelled pills floating next to the widget behind
@@ -68,10 +73,13 @@ Future<T?> showAnchoredMenu<T>({
               children: [
                 for (var i = 0; i < actions.length; i++) ...[
                   if (i > 0) const SizedBox(height: spacing),
-                  _ActionPill(
-                    icon: actions[i].icon,
-                    label: actions[i].label,
-                    onTap: () => Navigator.pop(ctx, actions[i].value),
+                  TestId(
+                    actions[i].testId,
+                    child: _ActionPill(
+                      icon: actions[i].icon,
+                      label: actions[i].label,
+                      onTap: () => Navigator.pop(ctx, actions[i].value),
+                    ),
                   ),
                 ],
               ],

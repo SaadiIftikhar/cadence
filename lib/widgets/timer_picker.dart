@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 
@@ -39,45 +41,48 @@ class _TimerPickerState extends State<TimerPicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Material(
-          color: Colors.transparent,
-          shape: const StadiumBorder(side: BorderSide(color: AppColors.outline)),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: Row(
-                children: [
-                  const Icon(Symbols.timer, size: 28),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).stepTimer,
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Text(
-                      seconds > 0
-                          ? formatDuration(Duration(seconds: seconds))
-                          : AppLocalizations.of(context).timerNone,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: seconds > 0
-                            ? AppColors.primary
-                            : AppColors.onSurfaceVariant,
+        TestId(
+          TestIds.timerToggle,
+          child: Material(
+            color: Colors.transparent,
+            shape: const StadiumBorder(side: BorderSide(color: AppColors.outline)),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  children: [
+                    const Icon(Symbols.timer, size: 28),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Text(
+                        AppLocalizations.of(context).stepTimer,
+                        style: const TextStyle(fontSize: 20),
                       ),
                     ),
-                  ),
-                  AnimatedRotation(
-                    turns: _expanded ? 0.5 : 0,
-                    duration: AppMotion.fast,
-                    child: const Icon(Symbols.arrow_drop_down, size: 30),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: Text(
+                        seconds > 0
+                            ? formatDuration(Duration(seconds: seconds))
+                            : AppLocalizations.of(context).timerNone,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: seconds > 0
+                              ? AppColors.primary
+                              : AppColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: AppMotion.fast,
+                      child: const Icon(Symbols.arrow_drop_down, size: 30),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -93,29 +98,38 @@ class _TimerPickerState extends State<TimerPicker> {
                 Row(
                   children: [
                     Expanded(
-                      child: _UnitPicker(
-                        label: AppLocalizations.of(context).hours,
-                        value: seconds ~/ 3600,
-                        max: 23,
-                        onChanged: (v) => _setUnit(hours: v),
+                      child: TestId(
+                        TestIds.timerHours,
+                        child: _UnitPicker(
+                          label: AppLocalizations.of(context).hours,
+                          value: seconds ~/ 3600,
+                          max: 23,
+                          onChanged: (v) => _setUnit(hours: v),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _UnitPicker(
-                        label: AppLocalizations.of(context).minutes,
-                        value: (seconds % 3600) ~/ 60,
-                        max: 59,
-                        onChanged: (v) => _setUnit(minutes: v),
+                      child: TestId(
+                        TestIds.timerMinutes,
+                        child: _UnitPicker(
+                          label: AppLocalizations.of(context).minutes,
+                          value: (seconds % 3600) ~/ 60,
+                          max: 59,
+                          onChanged: (v) => _setUnit(minutes: v),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _UnitPicker(
-                        label: AppLocalizations.of(context).seconds,
-                        value: seconds % 60,
-                        max: 59,
-                        onChanged: (v) => _setUnit(secs: v),
+                      child: TestId(
+                        TestIds.timerSeconds,
+                        child: _UnitPicker(
+                          label: AppLocalizations.of(context).seconds,
+                          value: seconds % 60,
+                          max: 59,
+                          onChanged: (v) => _setUnit(secs: v),
+                        ),
                       ),
                     ),
                   ],
@@ -123,10 +137,13 @@ class _TimerPickerState extends State<TimerPicker> {
                 if (seconds > 0)
                   Align(
                     alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () => widget.onChanged(0),
-                      icon: const Icon(Symbols.close, size: 20),
-                      label: Text(AppLocalizations.of(context).noTimer),
+                    child: TestId(
+                      TestIds.timerClear,
+                      child: TextButton.icon(
+                        onPressed: () => widget.onChanged(0),
+                        icon: const Icon(Symbols.close, size: 20),
+                        label: Text(AppLocalizations.of(context).noTimer),
+                      ),
                     ),
                   ),
               ],

@@ -9,6 +9,8 @@ import '../data/backup_service.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 
 /// Not in the mockups — designed to match them. Surfaces the two Android
@@ -187,47 +189,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         // No screen heading: the bottom bar already names this tab, and Home
         // and Calendar do not carry one either.
         _SectionLabel(l10n.sectionPermissions),
-        _SettingRow(
-          icon: Symbols.notifications,
-          title: l10n.permissionsRow,
-          subtitle: _permissionSubtitle(l10n),
-          trailing: _status == null
-              ? null
-              : _status!.allGranted
-                  // Nothing left to ask for, so the button becomes a receipt.
-                  ? const Icon(Symbols.check_circle,
-                      size: 26, color: AppColors.success)
-                  : TextButton(
-                      onPressed: _busy ? null : _request,
-                      child: Text(l10n.actionGrant),
-                    ),
+        TestId(
+          TestIds.settingsPermissions,
+          child: _SettingRow(
+            icon: Symbols.notifications,
+            title: l10n.permissionsRow,
+            subtitle: _permissionSubtitle(l10n),
+            trailing: _status == null
+                ? null
+                : _status!.allGranted
+                    // Nothing left to ask for, so the button becomes a receipt.
+                    ? const Icon(Symbols.check_circle,
+                        size: 26, color: AppColors.success)
+                    : TextButton(
+                        onPressed: _busy ? null : _request,
+                        child: Text(l10n.actionGrant),
+                      ),
+          ),
         ),
         const SizedBox(height: 26),
         _SectionLabel(l10n.sectionBackup),
-        _SettingRow(
-          icon: Symbols.download,
-          title: l10n.exportTitle,
-          subtitle: l10n.exportSubtitle,
-          trailing: TextButton(
-            onPressed: _busy ? null : _export,
-            child: Text(l10n.exportTitle),
+        TestId(
+          TestIds.settingsExport,
+          child: _SettingRow(
+            icon: Symbols.download,
+            title: l10n.exportTitle,
+            subtitle: l10n.exportSubtitle,
+            trailing: TextButton(
+              onPressed: _busy ? null : _export,
+              child: Text(l10n.exportTitle),
+            ),
           ),
         ),
-        _SettingRow(
-          icon: Symbols.upload,
-          title: l10n.importTitle,
-          subtitle: l10n.importSubtitle,
-          trailing: TextButton(
-            onPressed: _busy ? null : _import,
-            child: Text(l10n.importTitle),
+        TestId(
+          TestIds.settingsImport,
+          child: _SettingRow(
+            icon: Symbols.upload,
+            title: l10n.importTitle,
+            subtitle: l10n.importSubtitle,
+            trailing: TextButton(
+              onPressed: _busy ? null : _import,
+              child: Text(l10n.importTitle),
+            ),
           ),
         ),
         const SizedBox(height: 26),
         _SectionLabel(l10n.sectionAbout),
-        _SettingRow(
-          icon: Symbols.info,
-          title: l10n.appName,
-          subtitle: l10n.appTagline,
+        TestId(
+          TestIds.settingsAbout,
+          child: _SettingRow(
+            icon: Symbols.info,
+            title: l10n.appName,
+            subtitle: l10n.appTagline,
+          ),
         ),
       ],
     );

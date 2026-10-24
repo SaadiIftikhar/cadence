@@ -4,6 +4,8 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../data/app_prefs.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hint_callout.dart';
 import '../widgets/tappable_icon.dart';
@@ -101,16 +103,22 @@ class _EditStepScreenState extends State<EditStepScreen> {
         ),
         actions: [
           if (widget.allowDelete)
-            IconButton(
-              icon: Icon(Symbols.delete,
-                  semanticLabel: AppLocalizations.of(context).deleteStep),
-              onPressed: () =>
-                  Navigator.pop(context, const StepEditResult.delete()),
+            TestId(
+              TestIds.stepEditorDelete,
+              child: IconButton(
+                icon: Icon(Symbols.delete,
+                    semanticLabel: AppLocalizations.of(context).deleteStep),
+                onPressed: () =>
+                    Navigator.pop(context, const StepEditResult.delete()),
+              ),
             ),
-          IconButton(
-            icon: Icon(Symbols.save,
-                semanticLabel: AppLocalizations.of(context).saveStep),
-            onPressed: _save,
+          TestId(
+            TestIds.stepEditorSave,
+            child: IconButton(
+              icon: Icon(Symbols.save,
+                  semanticLabel: AppLocalizations.of(context).saveStep),
+              onPressed: _save,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -118,28 +126,35 @@ class _EditStepScreenState extends State<EditStepScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
-          TextField(
-            controller: _title,
-            style: const TextStyle(fontSize: 19),
-            textCapitalization: TextCapitalization.sentences,
-            onChanged: (v) {
-              if (_titleInvalid && v.trim().isNotEmpty) {
-                setState(() => _titleInvalid = false);
-              }
-            },
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context).stepTitle,
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              enabledBorder:
-                  _titleInvalid ? AppShapes.invalidFieldBorder : null,
-              focusedBorder:
-                  _titleInvalid ? AppShapes.invalidFieldBorder : null,
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 8),
-                child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
+          TestId(
+            TestIds.stepEditorTitleField,
+            merge: false,
+            child: TextField(
+              controller: _title,
+              style: const TextStyle(fontSize: 19),
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (v) {
+                if (_titleInvalid && v.trim().isNotEmpty) {
+                  setState(() => _titleInvalid = false);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).stepTitle,
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                enabledBorder:
+                    _titleInvalid ? AppShapes.invalidFieldBorder : null,
+                focusedBorder:
+                    _titleInvalid ? AppShapes.invalidFieldBorder : null,
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 8),
+                  child: TestId(
+                    TestIds.editorIcon,
+                    child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
               ),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
           if (_showIconHint)

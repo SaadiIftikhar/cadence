@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import 'segmented_border.dart';
@@ -81,10 +83,13 @@ class PillTile extends StatelessWidget {
                 Icon(IconCatalog.resolve(iconKey), size: 26, color: foreground),
                 const SizedBox(width: 22),
               ] else ...[
-                TappableIcon(
-                  iconKey: iconKey,
-                  onTap: onIconTap!,
-                  semanticLabel: AppLocalizations.of(context).changeStepIcon,
+                TestId(
+                  TestIds.editorStepIcon,
+                  child: TappableIcon(
+                    iconKey: iconKey,
+                    onTap: onIconTap!,
+                    semanticLabel: AppLocalizations.of(context).changeStepIcon,
+                  ),
                 ),
                 const SizedBox(width: 14),
               ],

@@ -7,6 +7,8 @@ import 'package:table_calendar/table_calendar.dart';
 import '../data/database.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/pill_tile.dart';
@@ -113,38 +115,47 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            Text(
-              DateFormat('EEEE, d MMMM').format(_selected),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, color: AppColors.onSurface),
+            TestId(
+              TestIds.calendarSelectedDay,
+              child: Text(
+                DateFormat('EEEE, d MMMM').format(_selected),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 20, color: AppColors.onSurface),
+              ),
             ),
             const SizedBox(height: 14),
             if (forDay.isEmpty)
-              EmptyState(
-                icon: Symbols.event_busy,
-                title: AppLocalizations.of(context).calendarNothingTitle,
-                message: AppLocalizations.of(context).calendarNothingMessage,
+              TestId(
+                TestIds.calendarEmpty,
+                child: EmptyState(
+                  icon: Symbols.event_busy,
+                  title: AppLocalizations.of(context).calendarNothingTitle,
+                  message: AppLocalizations.of(context).calendarNothingMessage,
+                ),
               )
             else
               for (final r in forDay)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: PillTile(
-                    label: r.title.trim().isEmpty
-                        ? AppLocalizations.of(context).untitledReminder
-                        : r.title.trim(),
-                    iconKey: r.iconKey,
-                    trailing: Text(
-                      _formatTime(r),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
+                  child: TestId(
+                    TestIds.calendarReminder,
+                    child: PillTile(
+                      label: r.title.trim().isEmpty
+                          ? AppLocalizations.of(context).untitledReminder
+                          : r.title.trim(),
+                      iconKey: r.iconKey,
+                      trailing: Text(
+                        _formatTime(r),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => RunReminderScreen(reminderId: r.id),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RunReminderScreen(reminderId: r.id),
+                        ),
                       ),
                     ),
                   ),

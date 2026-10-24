@@ -11,6 +11,8 @@ import '../data/database.dart';
 import '../data/providers.dart';
 import '../services/chime.dart';
 import '../services/notification_service.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/icon_catalog.dart';
 import '../widgets/timer_pill.dart';
@@ -247,22 +249,31 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _CircleControl(
-                  icon: _running ? Symbols.pause : Symbols.play_arrow,
-                  label: _running ? AppLocalizations.of(context).actionPause : AppLocalizations.of(context).actionStart,
-                  onTap: _completed ? null : (_running ? _pause : _start),
+                TestId(
+                  TestIds.timerStartPause,
+                  child: _CircleControl(
+                    icon: _running ? Symbols.pause : Symbols.play_arrow,
+                    label: _running ? AppLocalizations.of(context).actionPause : AppLocalizations.of(context).actionStart,
+                    onTap: _completed ? null : (_running ? _pause : _start),
+                  ),
                 ),
                 const SizedBox(width: 20),
-                TimerPill(
-                  remaining: _remaining,
-                  total: _total,
-                  enabled: !_completed,
+                TestId(
+                  TestIds.timerRemaining,
+                  child: TimerPill(
+                    remaining: _remaining,
+                    total: _total,
+                    enabled: !_completed,
+                  ),
                 ),
                 const SizedBox(width: 20),
-                _CircleControl(
-                  icon: Symbols.restart_alt,
-                  label: AppLocalizations.of(context).backToFullTime,
-                  onTap: _completed ? null : _restartTimer,
+                TestId(
+                  TestIds.timerRestart,
+                  child: _CircleControl(
+                    icon: Symbols.restart_alt,
+                    label: AppLocalizations.of(context).backToFullTime,
+                    onTap: _completed ? null : _restartTimer,
+                  ),
                 ),
               ],
             ),
@@ -331,30 +342,36 @@ class _RunStepScreenState extends ConsumerState<RunStepScreen>
               child: Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      // Undoes completion, so there is nothing to undo until
-                      // the step has been marked done. Putting the timer back
-                      // to full is the control next to the timer itself.
-                      onPressed: _completed ? _reset : null,
-                      icon: const Icon(Symbols.refresh, size: 24),
-                      label: Text(AppLocalizations.of(context).actionReset),
+                    child: TestId(
+                      TestIds.stepReset,
+                      child: OutlinedButton.icon(
+                        // Undoes completion, so there is nothing to undo until
+                        // the step has been marked done. Putting the timer back
+                        // to full is the control next to the timer itself.
+                        onPressed: _completed ? _reset : null,
+                        icon: const Icon(Symbols.refresh, size: 24),
+                        label: Text(AppLocalizations.of(context).actionReset),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      // Nothing left to do once it is done, so the button
-                      // stops responding until Reset. The tick keeps its
-                      // green — an explicit colour survives the disabled
-                      // styling — so the button reads as "already done"
-                      // rather than as simply unavailable.
-                      onPressed: _completed ? null : _done,
-                      icon: Icon(
-                        Symbols.done_all,
-                        size: 24,
-                        color: _completed ? AppColors.success : null,
+                    child: TestId(
+                      TestIds.stepDone,
+                      child: OutlinedButton.icon(
+                        // Nothing left to do once it is done, so the button
+                        // stops responding until Reset. The tick keeps its
+                        // green — an explicit colour survives the disabled
+                        // styling — so the button reads as "already done"
+                        // rather than as simply unavailable.
+                        onPressed: _completed ? null : _done,
+                        icon: Icon(
+                          Symbols.done_all,
+                          size: 24,
+                          color: _completed ? AppColors.success : null,
+                        ),
+                        label: Text(AppLocalizations.of(context).actionDone),
                       ),
-                      label: Text(AppLocalizations.of(context).actionDone),
                     ),
                   ),
                 ],
@@ -388,16 +405,19 @@ class _StepHeading extends StatelessWidget {
             color: AppColors.primary,
           ),
           const SizedBox(height: 28),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 26,
-              height: 1.25,
-              fontWeight: FontWeight.w600,
-              color: AppColors.onSurface,
+          TestId(
+            TestIds.stepTitle,
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 26,
+                height: 1.25,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurface,
+              ),
             ),
           ),
         ],

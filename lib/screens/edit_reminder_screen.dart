@@ -12,6 +12,8 @@ import '../data/app_prefs.dart';
 import '../data/providers.dart';
 import '../l10n/app_localizations.dart';
 import '../services/notification_service.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 import '../util/duration_format.dart';
 import '../util/icon_catalog.dart';
@@ -366,15 +368,18 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
         ),
         title: Text(_screenTitle(l10n)),
         actions: [
-          IconButton(
-            icon: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  )
-                : Icon(Symbols.save, semanticLabel: l10n.actionSave),
-            onPressed: _saving ? null : _save,
+          TestId(
+            TestIds.editorSave,
+            child: IconButton(
+              icon: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  : Icon(Symbols.save, semanticLabel: l10n.actionSave),
+              onPressed: _saving ? null : _save,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -382,26 +387,33 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 48),
         children: [
-          TextField(
-            controller: _title,
-            style: const TextStyle(fontSize: 19),
-            textCapitalization: TextCapitalization.sentences,
-            onChanged: (v) {
-              if (_titleInvalid && v.trim().isNotEmpty) {
-                setState(() => _titleInvalid = false);
-              }
-            },
-            decoration: InputDecoration(
-              labelText: _routine ? l10n.routineName : l10n.stepTitle,
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              enabledBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
-              focusedBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
-              prefixIcon: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 8),
-                child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
+          TestId(
+            TestIds.editorTitleField,
+            merge: false,
+            child: TextField(
+              controller: _title,
+              style: const TextStyle(fontSize: 19),
+              textCapitalization: TextCapitalization.sentences,
+              onChanged: (v) {
+                if (_titleInvalid && v.trim().isNotEmpty) {
+                  setState(() => _titleInvalid = false);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: _routine ? l10n.routineName : l10n.stepTitle,
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                enabledBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
+                focusedBorder: _titleInvalid ? AppShapes.invalidFieldBorder : null,
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 12, right: 8),
+                  child: TestId(
+                    TestIds.editorIcon,
+                    child: TappableIcon(iconKey: _iconKey, onTap: _pickIcon),
+                  ),
+                ),
+                prefixIconConstraints:
+                    const BoxConstraints(minWidth: 0, minHeight: 0),
               ),
-              prefixIconConstraints:
-                  const BoxConstraints(minWidth: 0, minHeight: 0),
             ),
           ),
           if (_showIconHint)
@@ -410,15 +422,18 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               onDismiss: _dismissIconHint,
             ),
           const SizedBox(height: 18),
-          ValuePill(
-            icon: Symbols.schedule,
-            label: l10n.fieldTime,
-            value: _time == null
-                ? l10n.setTime
-                : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
-            placeholder: _time == null,
-            invalid: _timeInvalid,
-            onTap: _pickTime,
+          TestId(
+            TestIds.editorTime,
+            child: ValuePill(
+              icon: Symbols.schedule,
+              label: l10n.fieldTime,
+              value: _time == null
+                  ? l10n.setTime
+                  : MaterialLocalizations.of(context).formatTimeOfDay(_time!),
+              placeholder: _time == null,
+              invalid: _timeInvalid,
+              onTap: _pickTime,
+            ),
           ),
           if (_showTimeHint)
             HintCallout(
@@ -427,12 +442,15 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               arrowInset: 34,
             ),
           const SizedBox(height: 12),
-          ValuePill(
-            icon: Symbols.repeat,
-            label: l10n.fieldRepeat,
-            value: describeDays(l10n, _daysMask),
-            placeholder: _daysMask == 0,
-            onTap: _pickDays,
+          TestId(
+            TestIds.editorRepeat,
+            child: ValuePill(
+              icon: Symbols.repeat,
+              label: l10n.fieldRepeat,
+              value: describeDays(l10n, _daysMask),
+              placeholder: _daysMask == 0,
+              onTap: _pickDays,
+            ),
           ),
           if (!_routine) ...[
             const SizedBox(height: 12),
@@ -442,23 +460,32 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             ),
           ],
           const SizedBox(height: 18),
-          LabeledSwitch(
-            label: l10n.switchNotifications,
-            value: _notifications,
-            onChanged: (v) => setState(() => _notifications = v),
+          TestId(
+            TestIds.editorNotifications,
+            child: LabeledSwitch(
+              label: l10n.switchNotifications,
+              value: _notifications,
+              onChanged: (v) => setState(() => _notifications = v),
+            ),
           ),
-          LabeledSwitch(
-            label: l10n.switchAlarm,
-            value: _alarm,
-            onChanged: (v) => setState(() => _alarm = v),
+          TestId(
+            TestIds.editorAlarm,
+            child: LabeledSwitch(
+              label: l10n.switchAlarm,
+              value: _alarm,
+              onChanged: (v) => setState(() => _alarm = v),
+            ),
           ),
           const SizedBox(height: 18),
           const Divider(),
           const SizedBox(height: 18),
-          LabeledSwitch(
-            label: l10n.switchAddImage,
-            value: _addImage,
-            onChanged: (v) => setState(() => _addImage = v),
+          TestId(
+            TestIds.editorAddImage,
+            child: LabeledSwitch(
+              label: l10n.switchAddImage,
+              value: _addImage,
+              onChanged: (v) => setState(() => _addImage = v),
+            ),
           ),
           if (_addImage) ...[
             const SizedBox(height: 18),
@@ -471,11 +498,14 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             if (_steps.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  l10n.noStepsYet,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 15, color: AppColors.onSurfaceVariant),
+                child: TestId(
+                  TestIds.editorNoSteps,
+                  child: Text(
+                    l10n.noStepsYet,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 15, color: AppColors.onSurfaceVariant),
+                  ),
                 ),
               )
             else ...[
@@ -500,40 +530,47 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                   // own row rather than swapping content with a neighbour.
                   key: ObjectKey(_steps[i]),
                   padding: EdgeInsets.only(bottom: i == _steps.length - 1 ? 0 : 12),
-                  child: PillTile(
-                    label: _steps[i].title.isEmpty
-                        ? l10n.untitledStep
-                        : _steps[i].title,
-                    iconKey: _steps[i].iconKey,
-                    onTap: () => _editStep(i),
-                    onIconTap: () => _pickStepIcon(i),
-                    trailing: _steps[i].hasTimer
-                        ? Text(
-                            formatDuration(
-                                Duration(seconds: _steps[i].timerSeconds!)),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          )
-                        : null,
+                  child: TestId(
+                    TestIds.editorStepRow,
+                    merge: false,
+                    child: PillTile(
+                      label: _steps[i].title.isEmpty
+                          ? l10n.untitledStep
+                          : _steps[i].title,
+                      iconKey: _steps[i].iconKey,
+                      onTap: () => _editStep(i),
+                      onIconTap: () => _pickStepIcon(i),
+                      trailing: _steps[i].hasTimer
+                          ? Text(
+                              formatDuration(
+                                  Duration(seconds: _steps[i].timerSeconds!)),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
             ],
             const SizedBox(height: 20),
             Center(
-              child: OutlinedButton.icon(
-                onPressed: _addStep,
-                style: _stepsInvalid
-                    ? OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                            color: AppColors.error, width: 3),
-                      )
-                    : null,
-                icon: const Icon(Symbols.add, size: 24),
-                label: Text(l10n.addStep),
+              child: TestId(
+                TestIds.editorAddStep,
+                child: OutlinedButton.icon(
+                  onPressed: _addStep,
+                  style: _stepsInvalid
+                      ? OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: AppColors.error, width: 3),
+                        )
+                      : null,
+                  icon: const Icon(Symbols.add, size: 24),
+                  label: Text(l10n.addStep),
+                ),
               ),
             ),
           ],

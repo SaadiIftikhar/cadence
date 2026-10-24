@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../testing/test_id.dart';
+import '../testing/test_ids.dart';
 import '../theme/app_theme.dart';
 
 /// A one-off note pointing up at the control above it, explaining something
@@ -58,13 +60,16 @@ class HintCallout extends StatelessWidget {
                     ),
                   ),
                 ),
-                TextButton(
-                  onPressed: onDismiss,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                TestId(
+                  TestIds.hintDismiss,
+                  child: TextButton(
+                    onPressed: onDismiss,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.onPrimary,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
+                    child: Text(AppLocalizations.of(context).actionGotIt),
                   ),
-                  child: Text(AppLocalizations.of(context).actionGotIt),
                 ),
               ],
             ),
