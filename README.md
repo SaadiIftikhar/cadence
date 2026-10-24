@@ -22,6 +22,10 @@ is checked for that.
 Sideloading, so Play Protect will warn you about an unrecognised developer.
 The build is signed with Flutter's debug key for now.
 
+An x86_64 build is published alongside, for Android emulators:
+[Cadence-x86_64.apk](https://github.com/SaadiIftikhar/cadence/releases/latest/download/Cadence-x86_64.apk).
+It is what the [end-to-end tests](https://github.com/SaadiIftikhar/appium-automation) run against.
+
 ## What it does
 
 - Routines of ordered steps, or single-step reminders
